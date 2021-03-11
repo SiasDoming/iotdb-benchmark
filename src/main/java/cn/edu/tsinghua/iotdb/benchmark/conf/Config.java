@@ -117,7 +117,7 @@ public class Config {
 
 	public int LIMIT_CLAUSE_MODE = 0;
 
-	public String OPERATION_PROPORTION = "1:0:0:0:0:0:0:0:0";
+	public String OPERATION_PROPORTION = "1:0:0:0:0:0:0:0:0:0";
 
 	public String INSERT_DATATYPE_PROPORTION = "1:1:1:1:1:1";
 
@@ -233,11 +233,12 @@ public class Config {
 	public int QUERY_LIMIT_OFFSET = 0;
 	public int QUERY_SLIMIT_N = 1;
 	public int QUERY_SLIMIT_OFFSET = 0;
+	public String QUERY_RANGED_UDF = "";
 	public boolean CREATE_SCHEMA = true;
 	public long REAL_QUERY_START_TIME = 0;
 	public long REAL_QUERY_STOP_TIME = Long.MAX_VALUE;
 	public int WRITE_OPERATION_TIMEOUT_MS = 120000;
-  public int READ_OPERATION_TIMEOUT_MS = 300000;
+  	public int READ_OPERATION_TIMEOUT_MS = 300000;
 
 
 	//mysql相关参数

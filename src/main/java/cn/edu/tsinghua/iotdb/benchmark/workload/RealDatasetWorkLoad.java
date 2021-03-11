@@ -10,6 +10,7 @@ import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.LatestPointQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.PreciseQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.ValueRangeQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.BasicReader;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.GeolifeReader;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.ReddReader;
@@ -132,6 +133,11 @@ public class RealDatasetWorkLoad implements IWorkload {
   @Override
   public LatestPointQuery getLatestPointQuery() {
     return new LatestPointQuery(deviceSchemaList, startTime, endTime, "last");
+  }
+
+  @Override
+  public RangedUDFQuery getRangedUDFQuery() {
+    return new RangedUDFQuery(deviceSchemaList, startTime, endTime, config.QUERY_RANGED_UDF);
   }
 
   static String calGroupIdStr(String deviceId, int groupNum) {

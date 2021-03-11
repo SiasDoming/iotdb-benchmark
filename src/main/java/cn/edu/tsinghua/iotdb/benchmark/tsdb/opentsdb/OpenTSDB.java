@@ -19,6 +19,7 @@ import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.LatestPointQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.PreciseQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.ValueRangeQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 import com.alibaba.fastjson.JSON;
 
@@ -140,7 +141,6 @@ public class OpenTSDB implements IDatabase {
         return new Status(false, 0, e, e.getMessage());
     }
 
-
     @Override
     public Status aggRangeQuery(AggRangeQuery aggRangeQuery) {
         Map<String, Object> queryMap = new HashMap<>();
@@ -154,20 +154,17 @@ public class OpenTSDB implements IDatabase {
         return executeQueryAndGetStatus(sql, false);
     }
 
-
     @Override
     public Status aggValueQuery(AggValueQuery aggValueQuery) {
         Exception e = new TsdbException("OpenTSDB don't support this kind of query");
         return new Status(false, 0, e, e.getMessage());
     }
 
-
     @Override
     public Status aggRangeValueQuery(AggRangeValueQuery aggRangeValueQuery) {
         Exception e = new TsdbException("OpenTSDB don't support this kind of query");
         return new Status(false, 0, e, e.getMessage());
     }
-
 
     @Override
     public Status groupByQuery(GroupByQuery groupByQuery) {
@@ -185,7 +182,6 @@ public class OpenTSDB implements IDatabase {
         return executeQueryAndGetStatus(sql, false);
     }
 
-
     @Override
     public Status latestPointQuery(LatestPointQuery latestPointQuery) {
         Map<String, Object> queryMap = new HashMap<>();
@@ -200,6 +196,11 @@ public class OpenTSDB implements IDatabase {
         queryMap.put("queries", list);
         String sql = JSON.toJSONString(queryMap);
         return executeQueryAndGetStatus(sql, true);
+    }
+
+    @Override
+    public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
+        return new Status(true, null, null);
     }
 
     @Override
@@ -231,7 +232,6 @@ public class OpenTSDB implements IDatabase {
         }
         return models;
     }
-
 
     private Status executeQueryAndGetStatus(String sql, boolean isLatestPoint) {
         LOGGER.debug("{} query SQL: {}", Thread.currentThread().getName(), sql);

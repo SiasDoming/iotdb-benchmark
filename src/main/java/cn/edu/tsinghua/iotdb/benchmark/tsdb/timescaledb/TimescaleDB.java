@@ -16,6 +16,7 @@ import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.LatestPointQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.PreciseQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.ValueRangeQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -258,6 +259,16 @@ public class TimescaleDB implements IDatabase {
     StringBuilder builder = getSampleQuerySqlHead(latestPointQuery.getDeviceSchema());
     builder.append("ORDER BY time DESC LIMIT 1");
     return executeQueryAndGetStatus(builder.toString(), sensorNum);
+  }
+
+  /**
+   * working in progress
+   *
+   * @param rangedUDFQuery contains universal ranged UDF query condition parameters
+   */
+  @Override
+  public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
+    return new Status(true, null, null);
   }
 
   private Status executeQueryAndGetStatus(String sql, int sensorNum) {

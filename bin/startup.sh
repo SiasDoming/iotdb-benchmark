@@ -6,6 +6,9 @@ fi
 
 echo $BENCHMARK_HOME
 
+BENCHMARK_CONF="$BENCHMARK_HOME"/conf/config.properties
+echo $BENCHMARK_CONF
+
 MAIN_CLASS=cn.edu.tsinghua.iotdb.benchmark.App
 
 CLASSPATH="."
@@ -26,6 +29,6 @@ else
 fi
 
 
-exec "$JAVA" -Duser.timezone=GMT+8 -Dlogback.configurationFile=${BENCHMARK_HOME}/conf/logback.xml  -cp "$CLASSPATH" "$MAIN_CLASS" "$@"
+exec "$JAVA" -Duser.timezone=GMT+8 -Dlogback.configurationFile=${BENCHMARK_HOME}/conf/logback.xml  -cp "$CLASSPATH" "$MAIN_CLASS" "$@" -cf "$BENCHMARK_CONF"
 
 exit $?

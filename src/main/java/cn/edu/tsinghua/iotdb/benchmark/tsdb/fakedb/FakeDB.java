@@ -31,6 +31,7 @@ import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.LatestPointQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.PreciseQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.ValueRangeQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 import java.util.List;
 
@@ -100,4 +101,10 @@ public class FakeDB implements IDatabase {
   public Status latestPointQuery(LatestPointQuery latestPointQuery) {
     return new Status(true, null, null);
   }
+
+  @Override
+  public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
+    return new Status(true, null, null);
+  }
+
 }

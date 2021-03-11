@@ -18,6 +18,7 @@ import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.LatestPointQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.PreciseQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.ValueRangeQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -279,6 +280,19 @@ public class IoTDB implements IDatabase {
     return executeQueryAndGetStatus(aggQuerySqlHead);
   }
 
+  /**
+   * SELECT UDF_name(s_3) FROM root.group_2.d_29 WHERE time >= 2010-01-01 12:00:00 AND time <=
+   * 2010-01-01 12:30:00
+   */
+  @Override
+  public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
+    String rangedUDFQuerySqlHead = getRangedUDFQuerySqlHead(rangedUDFQuery.getDeviceSchema(),
+            rangedUDFQuery.getUdfName());
+    String sql = addWhereTimeClause(rangedUDFQuerySqlHead, rangedUDFQuery.getStartTimestamp(),
+            rangedUDFQuery.getEndTimestamp());
+    return executeQueryAndGetStatus(sql);
+  }
+
   private String getvalueRangeQuerySql(ValueRangeQuery valueRangeQuery) {
     String rangeQuerySql = getRangeQuerySql(valueRangeQuery.getDeviceSchema(),
         valueRangeQuery.getStartTimestamp(), valueRangeQuery.getEndTimestamp());
@@ -421,4 +435,16 @@ public class IoTDB implements IDatabase {
     LOGGER.debug("getInsertOneBatchSql: {}", builder);
     return builder.toString();
   }
+
+  private String getRangedUDFQuerySqlHead(List<DeviceSchema> devices, String udfName) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("SELECT ");
+    List<String> querySensors = devices.get(0).getSensors();
+    builder.append(udfName).append("(").append(querySensors.get(0)).append(")");
+    for (int i = 1; i < querySensors.size(); i++) {
+      builder.append(", ").append(udfName).append("(").append(querySensors.get(i)).append(")");
+    }
+    return addFromClause(devices, builder);
+  }
+
 }

@@ -138,6 +138,13 @@ public abstract class BaseClient extends Client implements Runnable {
             LOGGER.error("Failed to do latest point query because ", e);
           }
           break;
+        case RANGED_UDF_QUERY:
+          try {
+            dbWrapper.rangedUDFQuery(syntheticWorkload.getRangedUDFQuery());
+          } catch (WorkloadException e) {
+            LOGGER.error("Fail to do ranged UDF query because ", e);
+          }
+          break;
         default:
           LOGGER.error("Unsupported operation type {}", operation);
       }

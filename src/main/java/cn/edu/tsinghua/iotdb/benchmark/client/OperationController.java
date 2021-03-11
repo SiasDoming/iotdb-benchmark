@@ -56,6 +56,8 @@ public class OperationController {
         return Operation.GROUP_BY_QUERY;
       case 9:
         return Operation.LATEST_POINT_QUERY;
+      case 10:
+        return Operation.RANGED_UDF_QUERY;
       default:
         LOGGER.error("Unsupported operation {}, use default operation: INGESTION.", i);
         return Operation.INGESTION;

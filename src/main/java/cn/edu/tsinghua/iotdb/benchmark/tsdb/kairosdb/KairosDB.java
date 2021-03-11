@@ -17,6 +17,7 @@ import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.LatestPointQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.PreciseQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.ValueRangeQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 import com.alibaba.fastjson.JSON;
 import java.io.IOException;
@@ -231,6 +232,12 @@ public class KairosDB implements IDatabase {
     Aggregator aggregator = AggregatorFactory.createLastAggregator(5000, TimeUnit.YEARS);
     addAggreForQuery(builder, aggregator);
     return executeOneQuery(builder);
+  }
+
+  @Override
+  public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
+    //not supported yet
+    return new Status(true, null, null);
   }
 
   private Status executeOneQuery(QueryBuilder builder) {

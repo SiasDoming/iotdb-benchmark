@@ -16,6 +16,7 @@ import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.LatestPointQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.PreciseQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.ValueRangeQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 import java.util.List;
 import org.slf4j.Logger;
@@ -202,6 +203,22 @@ public class DBWrapper implements IDatabase {
     try {
       long st = System.nanoTime();
       status = db.latestPointQuery(latestPointQuery);
+      long en = System.nanoTime();
+      status.setTimeCost(en - st);
+      handleQueryOperation(status, operation);
+    } catch (Exception e) {
+      handleUnexpectedQueryException(operation, e);
+    }
+    return status;
+  }
+
+  @Override
+  public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
+    Status status = null;
+    Operation operation = Operation.RANGED_UDF_QUERY;
+    try {
+      long st = System.nanoTime();
+      status = db.rangedUDFQuery(rangedUDFQuery);
       long en = System.nanoTime();
       status.setTimeCost(en - st);
       handleQueryOperation(status, operation);

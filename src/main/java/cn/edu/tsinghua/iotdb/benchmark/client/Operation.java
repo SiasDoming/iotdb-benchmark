@@ -9,7 +9,8 @@ public enum Operation {
   AGG_VALUE_QUERY("AGG_VALUE"),
   AGG_RANGE_VALUE_QUERY("AGG_RANGE_VALUE"),
   GROUP_BY_QUERY("GROUP_BY"),
-  LATEST_POINT_QUERY("LATEST_POINT");
+  LATEST_POINT_QUERY("LATEST_POINT"),
+  RANGED_UDF_QUERY("RANGED_UDF");
 
   public String getName() {
     return name;

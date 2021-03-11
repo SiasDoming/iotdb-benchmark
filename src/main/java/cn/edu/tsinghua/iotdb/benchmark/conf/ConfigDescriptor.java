@@ -145,6 +145,7 @@ public class ConfigDescriptor {
         config.IS_EMPTY_PRECISE_POINT_QUERY = Boolean.parseBoolean(properties
             .getProperty("IS_EMPTY_PRECISE_POINT_QUERY", config.IS_EMPTY_PRECISE_POINT_QUERY + ""));
         config.REMARK = properties.getProperty("REMARK", "-");
+        config.QUERY_RANGED_UDF = properties.getProperty("QUERY_RANGED_UDF", config.QUERY_RANGED_UDF);
 
         config.TEST_DATA_STORE_PORT = properties
             .getProperty("TEST_DATA_STORE_PORT", config.TEST_DATA_STORE_PORT);

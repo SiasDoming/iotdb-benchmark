@@ -28,7 +28,7 @@ else
     JAVA=java
 fi
 
-
+cd $BENCHMARK_HOME
 exec "$JAVA" -Duser.timezone=GMT+8 -Dlogback.configurationFile=${BENCHMARK_HOME}/conf/logback.xml  -cp "$CLASSPATH" "$MAIN_CLASS" "$@" -cf "$BENCHMARK_CONF"
 
 exit $?

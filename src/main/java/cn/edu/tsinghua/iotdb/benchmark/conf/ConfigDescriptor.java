@@ -146,6 +146,7 @@ public class ConfigDescriptor {
             .getProperty("IS_EMPTY_PRECISE_POINT_QUERY", config.IS_EMPTY_PRECISE_POINT_QUERY + ""));
         config.REMARK = properties.getProperty("REMARK", "-");
         config.QUERY_RANGED_UDF = properties.getProperty("QUERY_RANGED_UDF", config.QUERY_RANGED_UDF);
+        config.QUERY_UDF_FULL_CLASS_NAME = properties.getProperty("QUERY_UDF_FULL_CLASS_NAME", config.QUERY_UDF_FULL_CLASS_NAME);
 
         config.TEST_DATA_STORE_PORT = properties
             .getProperty("TEST_DATA_STORE_PORT", config.TEST_DATA_STORE_PORT);

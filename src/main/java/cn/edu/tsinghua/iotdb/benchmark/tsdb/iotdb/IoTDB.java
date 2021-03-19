@@ -47,6 +47,8 @@ public class IoTDB implements IDatabase {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(IoTDB.class);
   private static final String ALREADY_KEYWORD = "already exist";
+  private static final String ALREADY_REGISTRATED_KEYWORTD = "already been registered";
+  private static boolean IS_UDF_REGISTRATED = false;
   protected static Config config = ConfigDescriptor.getInstance().getConfig();
 
   protected IoTDBConnection ioTDBConnection;
@@ -286,6 +288,13 @@ public class IoTDB implements IDatabase {
    */
   @Override
   public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
+    if (!IS_UDF_REGISTRATED) {
+      try {
+        registerUDF(rangedUDFQuery.getUdfName(), rangedUDFQuery.getUdfFullClassName());
+      } catch (Exception e) {
+        return new Status(false, e, "UDF registration failed");
+      }
+    }
     String rangedUDFQuerySqlHead = getRangedUDFQuerySqlHead(rangedUDFQuery.getDeviceSchema(),
             rangedUDFQuery.getUdfName());
     String sql = addWhereTimeClause(rangedUDFQuerySqlHead, rangedUDFQuery.getStartTimestamp(),
@@ -445,6 +454,24 @@ public class IoTDB implements IDatabase {
       builder.append(", ").append(udfName).append("(").append(querySensors.get(i)).append(")");
     }
     return addFromClause(devices, builder);
+  }
+
+  public void registerUDF(String udfName, String udfFullClassName) throws TsdbException {
+    try {
+      Session udfSession = new Session(config.HOST, config.PORT, Constants.USER, Constants.PASSWD);
+      udfSession.open(config.ENABLE_THRIFT_COMPRESSION);
+      String registrationSql = String.format("CREATE FUNCTION %s AS \"%s\"", udfName, udfFullClassName);
+      udfSession.executeNonQueryStatement(registrationSql);
+      udfSession.close();
+      IS_UDF_REGISTRATED = true;
+    } catch (Exception e) {
+      // ignore if given udf is already registrated
+      if (!e.getMessage().contains(ALREADY_REGISTRATED_KEYWORTD) && !e.getMessage().contains("300")) {
+        LOGGER.error("Register IoTDB UDF failed because ", e);
+        throw new TsdbException(e);
+      }
+    }
+
   }
 
 }

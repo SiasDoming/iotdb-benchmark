@@ -335,7 +335,7 @@ public class SyntheticWorkload implements IWorkload {
     List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
     long startTimestamp = getQueryStartTimestamp();
     long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
-    return new RangedUDFQuery(queryDevices, startTimestamp, endTimestamp, config.QUERY_RANGED_UDF);
+    return new RangedUDFQuery(queryDevices, startTimestamp, endTimestamp, config.QUERY_RANGED_UDF, config.QUERY_UDF_FULL_CLASS_NAME);
   }
 
   private static long getTimestampConst(String timePrecision) {

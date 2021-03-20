@@ -1,8 +1,9 @@
 package cn.edu.tsinghua.iotdb.benchmark.workload.ingestion;
 
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
-import java.util.LinkedList;
+
 import java.util.List;
+import java.util.LinkedList;
 
 public class Batch {
 

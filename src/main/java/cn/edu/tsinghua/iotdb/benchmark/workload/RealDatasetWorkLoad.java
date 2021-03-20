@@ -3,21 +3,16 @@ package cn.edu.tsinghua.iotdb.benchmark.workload;
 import cn.edu.tsinghua.iotdb.benchmark.conf.Config;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Batch;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeValueQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggValueQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.GroupByQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.LatestPointQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.PreciseQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.ValueRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.BasicReader;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.GeolifeReader;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.ReddReader;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.TDriveReader;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
-import java.util.ArrayList;
+
 import java.util.List;
+import java.util.ArrayList;
 
 public class RealDatasetWorkLoad implements IWorkload {
 
@@ -93,46 +88,13 @@ public class RealDatasetWorkLoad implements IWorkload {
   }
 
   @Override
-  public PreciseQuery getPreciseQuery() {
-    return new PreciseQuery(deviceSchemaList, startTime);
-  }
-
-  @Override
   public RangeQuery getRangeQuery() {
     return new RangeQuery(deviceSchemaList, startTime, endTime);
   }
 
   @Override
-  public ValueRangeQuery getValueRangeQuery() {
-    return new ValueRangeQuery(deviceSchemaList, startTime, endTime, config.QUERY_LOWER_LIMIT);
-  }
-
-  @Override
   public AggRangeQuery getAggRangeQuery() {
     return new AggRangeQuery(deviceSchemaList, startTime, endTime, config.QUERY_AGGREGATE_FUN);
-  }
-
-  @Override
-  public AggValueQuery getAggValueQuery() {
-    return new AggValueQuery(startTime, endTime, deviceSchemaList, config.QUERY_AGGREGATE_FUN,
-        config.QUERY_LOWER_LIMIT);
-  }
-
-  @Override
-  public AggRangeValueQuery getAggRangeValueQuery() {
-    return new AggRangeValueQuery(deviceSchemaList, startTime, endTime, config.QUERY_AGGREGATE_FUN,
-        config.QUERY_LOWER_LIMIT);
-  }
-
-  @Override
-  public GroupByQuery getGroupByQuery() {
-    return new GroupByQuery(deviceSchemaList, startTime, endTime, config.QUERY_AGGREGATE_FUN,
-        config.QUERY_INTERVAL);
-  }
-
-  @Override
-  public LatestPointQuery getLatestPointQuery() {
-    return new LatestPointQuery(deviceSchemaList, startTime, endTime, "last");
   }
 
   @Override

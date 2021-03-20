@@ -10,26 +10,22 @@ import cn.edu.tsinghua.iotdb.benchmark.function.Function;
 import cn.edu.tsinghua.iotdb.benchmark.function.FunctionParam;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Batch;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeValueQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggValueQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.GroupByQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.LatestPointQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.PreciseQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.ValueRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DataSchema;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
+
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 public class SyntheticWorkload implements IWorkload {
@@ -265,75 +261,32 @@ public class SyntheticWorkload implements IWorkload {
     }
   }
 
-  private long getQueryStartTimestamp() {
-    long currentQueryLoop = operationLoops.get(Operation.PRECISE_QUERY);
+  private long getQueryStartTimestamp(Operation operation) {
+    long currentQueryLoop = operationLoops.get(operation);
     long timestampOffset = currentQueryLoop * config.STEP_SIZE * config.POINT_STEP;
-    operationLoops.put(Operation.PRECISE_QUERY, currentQueryLoop + 1);
+    operationLoops.put(operation, currentQueryLoop + 1);
     return Constants.START_TIMESTAMP * timeStampConst + timestampOffset;
-  }
-
-  public PreciseQuery getPreciseQuery() throws WorkloadException {
-    List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
-    long timestamp = getQueryStartTimestamp();
-    return new PreciseQuery(queryDevices, timestamp);
   }
 
   public RangeQuery getRangeQuery() throws WorkloadException {
     List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
-    long startTimestamp = getQueryStartTimestamp();
+    long startTimestamp = getQueryStartTimestamp(Operation.RANGE_QUERY);
     long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
     return new RangeQuery(queryDevices, startTimestamp, endTimestamp);
   }
 
-  public ValueRangeQuery getValueRangeQuery() throws WorkloadException {
-    List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
-    long startTimestamp = getQueryStartTimestamp();
-    long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
-    return new ValueRangeQuery(queryDevices, startTimestamp, endTimestamp,
-        config.QUERY_LOWER_LIMIT);
-  }
-
   public AggRangeQuery getAggRangeQuery() throws WorkloadException {
     List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
-    long startTimestamp = getQueryStartTimestamp();
+    long startTimestamp = getQueryStartTimestamp(Operation.AGG_RANGE_QUERY);
     long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
     return new AggRangeQuery(queryDevices, startTimestamp, endTimestamp,
-        config.QUERY_AGGREGATE_FUN);
-  }
-
-  public AggValueQuery getAggValueQuery() throws WorkloadException {
-    List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
-    return new AggValueQuery(queryDevices, config.QUERY_AGGREGATE_FUN, config.QUERY_LOWER_LIMIT);
-  }
-
-  public AggRangeValueQuery getAggRangeValueQuery() throws WorkloadException {
-    List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
-    long startTimestamp = getQueryStartTimestamp();
-    long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
-    return new AggRangeValueQuery(queryDevices, startTimestamp, endTimestamp,
-        config.QUERY_AGGREGATE_FUN, config.QUERY_LOWER_LIMIT);
-  }
-
-  public GroupByQuery getGroupByQuery() throws WorkloadException {
-    List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
-    long startTimestamp = getQueryStartTimestamp();
-    long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
-    return new GroupByQuery(queryDevices, startTimestamp, endTimestamp,
-        config.QUERY_AGGREGATE_FUN, config.TIME_UNIT);
-  }
-
-  public LatestPointQuery getLatestPointQuery() throws WorkloadException {
-    List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
-    long startTimestamp = getQueryStartTimestamp();
-    long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
-    return new LatestPointQuery(queryDevices, startTimestamp, endTimestamp,
         config.QUERY_AGGREGATE_FUN);
   }
 
   @Override
   public RangedUDFQuery getRangedUDFQuery() throws WorkloadException{
     List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
-    long startTimestamp = getQueryStartTimestamp();
+    long startTimestamp = getQueryStartTimestamp(Operation.RANGED_UDF_QUERY);
     long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
     return new RangedUDFQuery(queryDevices, startTimestamp, endTimestamp, config.QUERY_RANGED_UDF, config.QUERY_UDF_FULL_CLASS_NAME);
   }

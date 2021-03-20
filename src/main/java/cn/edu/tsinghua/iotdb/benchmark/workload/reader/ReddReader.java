@@ -4,9 +4,11 @@ import cn.edu.tsinghua.iotdb.benchmark.conf.Config;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Batch;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Record;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
-import java.io.File;
-import java.util.ArrayList;
+
 import java.util.List;
+import java.util.ArrayList;
+
+import java.io.File;
 
 public class ReddReader extends BasicReader {
 

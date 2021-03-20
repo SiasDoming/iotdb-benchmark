@@ -1,6 +1,7 @@
 package cn.edu.tsinghua.iotdb.benchmark.workload.query.impl;
 
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
+
 import java.util.List;
 
 public class AggRangeQuery extends RangeQuery {

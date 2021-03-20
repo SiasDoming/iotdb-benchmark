@@ -12,7 +12,7 @@ import org.junit.Test;
 public class OperationControllerTest {
 
   private static Config config = ConfigDescriptor.getInstance().getConfig();
-  private static OperationController operationController = new OperationController(0);
+  private static OperationController operationController = new OperationController();
 
   @Before
   public void before() {
@@ -27,9 +27,9 @@ public class OperationControllerTest {
 
   @Test
   public void testResolveOperationProportion() {
-    config.OPERATION_PROPORTION = "1:1:0:1:0:1:0:1:0";
-    Double[] expectedProbability = {0.2, 0.2, 0.0, 0.2, 0.0, 0.2, 0.0, 0.2, 0.0};
-    List<Double> proportion = operationController.resolveOperationProportion();
+    config.OPERATION_PROPORTION = "1:0:1:0";
+    Integer[] expectedProbability = {1, 1, 2, 2};
+    List<Integer> proportion = operationController.resolveOperationProportion();
     for (int i = 0; i < proportion.size(); i++) {
       assertEquals(expectedProbability[i], proportion.get(i));
     }
@@ -37,14 +37,14 @@ public class OperationControllerTest {
 
   @Test
   public void testGetNextOperationType() {
-    config.OPERATION_PROPORTION = "1:0:0:0:0:0:0:0:0";
-    int loop = 10000;
+    config.OPERATION_PROPORTION = "1:0:0:0";
+    int loop = 100;
     for(int i=0;i<loop;i++){
       assertEquals(Operation.INGESTION, operationController.getNextOperationType());
     }
-    config.OPERATION_PROPORTION = "0:1:0:0:0:0:0:0:0";
+    config.OPERATION_PROPORTION = "0:1:0:0";
     for(int i=0;i<loop;i++){
-      assertEquals(Operation.PRECISE_QUERY, operationController.getNextOperationType());
+      assertEquals(Operation.RANGE_QUERY, operationController.getNextOperationType());
     }
   }
 

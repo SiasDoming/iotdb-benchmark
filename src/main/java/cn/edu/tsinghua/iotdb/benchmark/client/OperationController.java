@@ -8,45 +8,40 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Random;
 
 public class OperationController {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(OperationController.class);
   private static Config config = ConfigDescriptor.getInstance().getConfig();
-  private Random random;
+  private int operationIndex = 0;
 
-  OperationController(int seed) {
-    random = new Random(seed);
+  OperationController() {
+
   }
 
   /**
    * @return Operation the next operation for client to execute
    */
   Operation getNextOperationType() {
-    List<Double> proportion = resolveOperationProportion();
-    double[] p = new double[Operation.values().length + 1];
-    p[0] = 0.0;
-    // split [0,1] to n regions, each region corresponds to a operation type whose probability
-    // is the region range size.
-    for (int i = 1; i <= Operation.values().length; i++) {
-      p[i] = p[i - 1] + proportion.get(i - 1);
-    }
-    double rand = random.nextDouble();
+    List<Integer> proportion = resolveOperationProportion();
     int i;
-    for (i = 1; i <= Operation.values().length; i++) {
-      if (rand >= p[i - 1] && rand <= p[i]) {
+    for (i = 0; i < Operation.values().length; i++) {
+      if (operationIndex < proportion.get(i)) {
         break;
       }
     }
+    operationIndex++;
+    if (operationIndex == proportion.get(Operation.values().length - 1)) {
+      operationIndex = 0;
+    }
     switch (i) {
-      case 1:
+      case 0:
         return Operation.INGESTION;
-      case 2:
+      case 1:
         return Operation.RANGE_QUERY;
-      case 3:
+      case 2:
         return Operation.AGG_RANGE_QUERY;
-      case 4:
+      case 3:
         return Operation.RANGED_UDF_QUERY;
       default:
         LOGGER.error("Unsupported operation {}, use default operation: INGESTION.", i);
@@ -54,25 +49,19 @@ public class OperationController {
     }
   }
 
-  List<Double> resolveOperationProportion() {
-    List<Double> proportion = new ArrayList<>();
+  List<Integer> resolveOperationProportion() {
+
+    List<Integer> proportion = new ArrayList<>(Operation.values().length);
     String[] split = config.OPERATION_PROPORTION.split(":");
     if (split.length != Operation.values().length) {
       LOGGER.error("OPERATION_PROPORTION error, please check this parameter.");
     }
-    double[] proportions = new double[Operation.values().length];
-    double sum = 0;
-    for (int i = 0; i < split.length; i++) {
-      proportions[i] = Double.parseDouble(split[i]);
-      sum += proportions[i];
+    proportion.add(Integer.parseInt(split[0]));
+    for (int i = 1; i < split.length; i++) {
+      proportion.add(proportion.get(i-1) + Integer.parseInt(split[i]));
     }
-    for (int i = 0; i < split.length; i++) {
-      if (sum != 0) {
-        proportion.add(proportions[i] / sum);
-      } else {
-        proportion.add(0.0);
-        LOGGER.error("The sum of operation proportions is zero!");
-      }
+    if (proportion.get(Operation.values().length - 1) == 0) {
+      LOGGER.error("The sum of operation proportions is zero!");
     }
     return proportion;
   }

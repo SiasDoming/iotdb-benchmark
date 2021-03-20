@@ -37,7 +37,7 @@ public abstract class BaseClient extends Client implements Runnable {
     super(id, countDownLatch, barrier);
     syntheticWorkload = workload;
     singletonWorkload = SingletonWorkload.getInstance();
-    operationController = new OperationController(id);
+    operationController = new OperationController();
     insertLoopIndex = 0;
   }
 

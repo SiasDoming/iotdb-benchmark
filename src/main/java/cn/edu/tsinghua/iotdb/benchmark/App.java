@@ -47,7 +47,7 @@ public class App {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
     private static final double NANO_TO_SECOND = 1000000000.0d;
-    private static Config config = ConfigDescriptor.getInstance().getConfig();
+    private static Config config = null;
 
     public static void main(String[] args) throws SQLException {
 
@@ -55,7 +55,7 @@ public class App {
         if (!cli.init(args)) {
             return;
         }
-        Config config = ConfigDescriptor.getInstance().getConfig();
+        config = ConfigDescriptor.getInstance().getConfig();
         switch (config.BENCHMARK_WORK_MODE.trim()) {
             case Constants.MODE_TEST_WITH_DEFAULT_PATH:
                 testWithDefaultPath(config);

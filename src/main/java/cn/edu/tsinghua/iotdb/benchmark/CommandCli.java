@@ -53,7 +53,7 @@ public class CommandCli {
 //		Option sensor = Option.builder(SENSOR_ARGS).argName(SENSOR_NAME).hasArg().desc("Sensor number (optional)").build();
 //		options.addOption(sensor);
 		
-		Option config = Option.builder(CONFIG_ARGS).argName(CONFIG_NAME).hasArg().desc("Config file path (optional)").build();
+		Option config = Option.builder(CONFIG_ARGS).argName(CONFIG_NAME).hasArg().desc("Config file path (optional, default set to ./conf/config.properties)").build();
 		options.addOption(config);
 		
 		return options;

@@ -3,24 +3,24 @@ package cn.edu.tsinghua.iotdb.benchmark.tsdb;
 import cn.edu.tsinghua.iotdb.benchmark.client.Operation;
 import cn.edu.tsinghua.iotdb.benchmark.conf.Config;
 import cn.edu.tsinghua.iotdb.benchmark.conf.ConfigDescriptor;
+import cn.edu.tsinghua.iotdb.benchmark.conf.Constants;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.Measurement;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.Status;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.persistence.ITestDataPersistence;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.persistence.PersistenceFactory;
+import cn.edu.tsinghua.iotdb.benchmark.tsdb.iotdb.IoTDB;
+import cn.edu.tsinghua.iotdb.benchmark.tsdb.iotdb.IoTDBClusterSession;
+import cn.edu.tsinghua.iotdb.benchmark.tsdb.iotdb.IoTDBSession;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Batch;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeValueQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggValueQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.GroupByQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.LatestPointQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.PreciseQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.ValueRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
-import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 public class DBWrapper implements IDatabase {
 
@@ -34,15 +34,43 @@ public class DBWrapper implements IDatabase {
   private ITestDataPersistence recorder;
 
   public DBWrapper(Measurement measurement) {
-    DBFactory dbFactory = new DBFactory();
     try {
-      db = dbFactory.getDatabase();
+      switch (config.INSERT_MODE) {
+        case Constants.INSERT_USE_JDBC:
+          db = new IoTDB();
+        case Constants.INSERT_USE_SESSION_RECORD:
+        case Constants.INSERT_USE_SESSION_RECORDS:
+        case Constants.INSERT_USE_SESSION_TABLET:
+          if (config.USE_CLUSTER_DB) {
+            db = new IoTDBClusterSession();
+          } else {
+            db = new IoTDBSession();
+          }
+      }
     } catch (Exception e) {
       LOGGER.error("Failed to get database because", e);
     }
     this.measurement = measurement;
     PersistenceFactory persistenceFactory = new PersistenceFactory();
     recorder = persistenceFactory.getPersistence();
+  }
+
+  @Override
+  public void init() throws TsdbException {
+    db.init();
+  }
+
+  @Override
+  public void cleanup() throws TsdbException {
+    db.cleanup();
+  }
+
+  @Override
+  public void close() throws TsdbException {
+    db.close();
+    if (recorder != null) {
+      recorder.close();
+    }
   }
 
   @Override
@@ -83,46 +111,12 @@ public class DBWrapper implements IDatabase {
   }
 
   @Override
-  public Status preciseQuery(PreciseQuery preciseQuery) {
-    Status status = null;
-    Operation operation = Operation.PRECISE_QUERY;
-    try {
-      long st = System.nanoTime();
-      status = db.preciseQuery(preciseQuery);
-      long en = System.nanoTime();
-      status.setTimeCost(en - st);
-      handleQueryOperation(status, operation);
-    } catch (Exception e) {
-      handleUnexpectedQueryException(operation, e);
-    }
-    return status;
-  }
-
-
-  @Override
   public Status rangeQuery(RangeQuery rangeQuery) {
     Status status = null;
     Operation operation = Operation.RANGE_QUERY;
     try {
       long st = System.nanoTime();
       status = db.rangeQuery(rangeQuery);
-      long en = System.nanoTime();
-      status.setTimeCost(en - st);
-      handleQueryOperation(status, operation);
-    } catch (Exception e) {
-      handleUnexpectedQueryException(operation, e);
-    }
-    return status;
-  }
-
-
-  @Override
-  public Status valueRangeQuery(ValueRangeQuery valueRangeQuery) {
-    Status status = null;
-    Operation operation = Operation.VALUE_RANGE_QUERY;
-    try {
-      long st = System.nanoTime();
-      status = db.valueRangeQuery(valueRangeQuery);
       long en = System.nanoTime();
       status.setTimeCost(en - st);
       handleQueryOperation(status, operation);
@@ -149,70 +143,6 @@ public class DBWrapper implements IDatabase {
   }
 
   @Override
-  public Status aggValueQuery(AggValueQuery aggValueQuery) {
-    Status status = null;
-    Operation operation = Operation.AGG_VALUE_QUERY;
-    try {
-      long st = System.nanoTime();
-      status = db.aggValueQuery(aggValueQuery);
-      long en = System.nanoTime();
-      status.setTimeCost(en - st);
-      handleQueryOperation(status, operation);
-    } catch (Exception e) {
-      handleUnexpectedQueryException(operation, e);
-    }
-    return status;
-  }
-
-  @Override
-  public Status aggRangeValueQuery(AggRangeValueQuery aggRangeValueQuery) {
-    Status status = null;
-    Operation operation = Operation.AGG_RANGE_VALUE_QUERY;
-    try {
-      long st = System.nanoTime();
-      status = db.aggRangeValueQuery(aggRangeValueQuery);
-      long en = System.nanoTime();
-      status.setTimeCost(en - st);
-      handleQueryOperation(status, operation);
-    } catch (Exception e) {
-      handleUnexpectedQueryException(operation, e);
-    }
-    return status;
-  }
-
-  @Override
-  public Status groupByQuery(GroupByQuery groupByQuery) {
-    Status status = null;
-    Operation operation = Operation.GROUP_BY_QUERY;
-    try {
-      long st = System.nanoTime();
-      status = db.groupByQuery(groupByQuery);
-      long en = System.nanoTime();
-      status.setTimeCost(en - st);
-      handleQueryOperation(status, operation);
-    } catch (Exception e) {
-      handleUnexpectedQueryException(operation, e);
-    }
-    return status;
-  }
-
-  @Override
-  public Status latestPointQuery(LatestPointQuery latestPointQuery) {
-    Status status = null;
-    Operation operation = Operation.LATEST_POINT_QUERY;
-    try {
-      long st = System.nanoTime();
-      status = db.latestPointQuery(latestPointQuery);
-      long en = System.nanoTime();
-      status.setTimeCost(en - st);
-      handleQueryOperation(status, operation);
-    } catch (Exception e) {
-      handleUnexpectedQueryException(operation, e);
-    }
-    return status;
-  }
-
-  @Override
   public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
     Status status = null;
     Operation operation = Operation.RANGED_UDF_QUERY;
@@ -226,24 +156,6 @@ public class DBWrapper implements IDatabase {
       handleUnexpectedQueryException(operation, e);
     }
     return status;
-  }
-
-  @Override
-  public void init() throws TsdbException {
-    db.init();
-  }
-
-  @Override
-  public void cleanup() throws TsdbException {
-    db.cleanup();
-  }
-
-  @Override
-  public void close() throws TsdbException {
-    db.close();
-    if (recorder != null) {
-      recorder.close();
-    }
   }
 
   @Override

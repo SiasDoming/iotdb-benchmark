@@ -2,11 +2,13 @@ package cn.edu.tsinghua.iotdb.benchmark.client;
 
 import cn.edu.tsinghua.iotdb.benchmark.conf.Config;
 import cn.edu.tsinghua.iotdb.benchmark.conf.ConfigDescriptor;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Random;
 
 public class OperationController {
 
@@ -41,22 +43,10 @@ public class OperationController {
       case 1:
         return Operation.INGESTION;
       case 2:
-        return Operation.PRECISE_QUERY;
-      case 3:
         return Operation.RANGE_QUERY;
-      case 4:
-        return Operation.VALUE_RANGE_QUERY;
-      case 5:
+      case 3:
         return Operation.AGG_RANGE_QUERY;
-      case 6:
-        return Operation.AGG_VALUE_QUERY;
-      case 7:
-        return Operation.AGG_RANGE_VALUE_QUERY;
-      case 8:
-        return Operation.GROUP_BY_QUERY;
-      case 9:
-        return Operation.LATEST_POINT_QUERY;
-      case 10:
+      case 4:
         return Operation.RANGED_UDF_QUERY;
       default:
         LOGGER.error("Unsupported operation {}, use default operation: INGESTION.", i);

@@ -98,13 +98,6 @@ public class App {
         // register schema if needed
         try {
             dbWrapper.init();
-            if (config.IS_DELETE_DATA) {
-                try {
-                    dbWrapper.cleanup();
-                } catch (TsdbException e) {
-                    LOGGER.error("Cleanup failed because ", e);
-                }
-            }
             try {
                 DataSchema dataSchema = DataSchema.getInstance();
                 List<DeviceSchema> schemaList = new ArrayList<>();
@@ -139,6 +132,22 @@ public class App {
             executorService.submit(client);
         }
         finalMeasure(executorService, downLatch, measurement, threadsMeasurements, st, clients);
+
+        if (config.IS_DELETE_DATA) {
+            try {
+                dbWrapper = new DBWrapper(measurement);
+                dbWrapper.init();
+                dbWrapper.cleanup();
+            } catch (TsdbException e) {
+                LOGGER.error("Cleanup failed because ", e);
+            } finally {
+                try {
+                    dbWrapper.close();
+                } catch (TsdbException e) {
+                    LOGGER.error("Close failed because ", e);
+                }
+            }
+        }
     }
 
     /**

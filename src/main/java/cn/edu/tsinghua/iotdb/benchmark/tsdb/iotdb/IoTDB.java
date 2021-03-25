@@ -65,8 +65,18 @@ public class IoTDB implements IDatabase {
   }
 
   @Override
-  public void cleanup() {
-    // currently no implementation
+  public void cleanup() throws TsdbException{
+    try {
+      Session cleanupSession = new Session(config.HOST, config.PORT, Constants.USER,
+              Constants.PASSWD);
+      cleanupSession.open(config.ENABLE_THRIFT_COMPRESSION);
+      String cleanupSql = String.format("DELETE TIMESERIES root.%s*", config.GROUP_NAME_PREFIX);
+      cleanupSession.executeNonQueryStatement(cleanupSql);
+      cleanupSession.close();
+    } catch (Exception e) {
+      LOGGER.error("Clean up IoTDB data failed because ", e);
+      throw new TsdbException(e);
+    }
   }
 
   @Override

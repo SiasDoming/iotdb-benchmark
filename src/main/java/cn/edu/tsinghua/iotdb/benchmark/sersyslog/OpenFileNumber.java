@@ -28,7 +28,7 @@ public class OpenFileNumber {
 
     private OpenFileNumber() {
         config = ConfigDescriptor.getInstance().getConfig();
-        pid = getPID(config.DB_SWITCH);
+        pid = getPID();
     }
 
     public static final OpenFileNumber getInstance() {
@@ -36,32 +36,14 @@ public class OpenFileNumber {
     }
 
     /**
-     * @param
      * @return int, pid
-     * @Purpose:获得当前指定的数据库服务器的PID
+     * @Purpose:获得IoTDB服务器的PID
      */
-    public int getPID(String dbName) {
+    public int getPID() {
         int pid = -1;
         Process pro1;
         Runtime r = Runtime.getRuntime();
-        String filter = "";
-        switch (dbName) {
-            case Constants.DB_IOT:
-                filter = "IOTDB_HOME";
-                break;
-            case Constants.DB_INFLUX:
-                filter = "/usr/bin/influxd";
-                break;
-            case Constants.DB_KAIROS:
-                filter = "kairosdb";
-                break;
-            case Constants.DB_TIMESCALE:
-                filter = "postgresql";
-                break;
-            case Constants.BENCHMARK_IOTDB:
-                filter = "../conf/config.properties";
-                break;
-        }
+        String filter = "IOTDB_HOME";
         try {
             String command = String.format(SEARCH_PID, filter);
             //System.out.println(command);
@@ -117,26 +99,7 @@ public class OpenFileNumber {
         int overflowNum = 0;
         int walsNum = 0;
 
-        String filter = "";
-        switch (config.DB_SWITCH) {
-            case Constants.DB_IOT:
-                filter = "/data/";
-                break;
-            case Constants.DB_INFLUX:
-                filter = ".influxdb";
-                break;
-            case Constants.DB_KAIROS:
-                filter = "kairosdb";
-                break;
-            case Constants.DB_TIMESCALE:
-                filter = "postgresql";
-                break;
-            case Constants.BENCHMARK_IOTDB:
-                filter = "iotdb-benchmark";
-                break;
-            default:
-                throw new SQLException("unsupported db name :" + config.DB_SWITCH);
-        }
+        String filter = "/data/";
         Process pro = null;
         Runtime r = Runtime.getRuntime();
         try {
@@ -212,7 +175,7 @@ public class OpenFileNumber {
         ArrayList<Integer> list = null;
         //如果port和pid不合理，再次尝试获取
         if (!(pid > 0)) {
-            pid = getPID(config.DB_SWITCH);
+            pid = getPID();
         }
         //如果pid合理，则加入打开文件总数和数据文件数目以及socket数目
         if (pid > 0) {
@@ -242,10 +205,5 @@ public class OpenFileNumber {
         }
         return true;
     }
-
-    public int getPid() {
-        return getPID(config.DB_SWITCH);
-    }
-
 
 }

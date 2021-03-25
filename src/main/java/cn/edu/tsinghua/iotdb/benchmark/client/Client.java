@@ -51,7 +51,7 @@ public abstract class Client implements Runnable {
         try {
           dbWrapper.close();
         } catch (TsdbException e) {
-          LOGGER.error("Close {} error: ", config.DB_SWITCH, e);
+          LOGGER.error("Close IoTDB error: ", e);
         }
       }
     } finally {

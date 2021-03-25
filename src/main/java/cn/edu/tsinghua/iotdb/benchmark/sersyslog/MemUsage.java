@@ -61,7 +61,7 @@ public class MemUsage {
         float processMemUsage = 0;
         Process pro;
         Runtime r = Runtime.getRuntime();
-        int pid = OpenFileNumber.getInstance().getPid();
+        int pid = OpenFileNumber.getInstance().getPID();
         if (pid > 0) {
             String command = "pmap -d " + pid;
             try {

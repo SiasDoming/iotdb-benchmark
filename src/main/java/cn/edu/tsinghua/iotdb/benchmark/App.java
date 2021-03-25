@@ -102,7 +102,7 @@ public class App {
                 try {
                     dbWrapper.cleanup();
                 } catch (TsdbException e) {
-                    LOGGER.error("Cleanup {} failed because ", config.DB_SWITCH, e);
+                    LOGGER.error("Cleanup failed because ", e);
                 }
             }
             try {
@@ -113,15 +113,15 @@ public class App {
                 }
                 dbWrapper.registerSchema(schemaList);
             } catch (TsdbException e) {
-                LOGGER.error("Register {} schema failed because ", config.DB_SWITCH, e);
+                LOGGER.error("Register schema failed because ", e);
             }
         } catch (TsdbException e) {
-            LOGGER.error("Initialize {} failed because ", config.DB_SWITCH, e);
+            LOGGER.error("Initialize failed because ", e);
         } finally {
             try {
                 dbWrapper.close();
             } catch (TsdbException e) {
-                LOGGER.error("Close {} failed because ", config.DB_SWITCH, e);
+                LOGGER.error("Close failed because ", e);
             }
         }
         // create CLIENT_NUMBER client threads to do the workloads
@@ -168,14 +168,14 @@ public class App {
         DBWrapper dbWrapper = new DBWrapper(measurement);
         // register schema if needed
         try {
-            LOGGER.info("start to init database {}", config.DB_SWITCH);
+            LOGGER.info("start to init IoTDB");
             dbWrapper.init();
             if (config.IS_DELETE_DATA) {
                 try {
                     LOGGER.info("start to clean old data");
                     dbWrapper.cleanup();
                 } catch (TsdbException e) {
-                    LOGGER.error("Cleanup {} failed because ", config.DB_SWITCH, e);
+                    LOGGER.error("Cleanup failed because ", e);
                 }
             }
             try {
@@ -183,15 +183,15 @@ public class App {
                 LOGGER.info("start to register schema");
                 dbWrapper.registerSchema(deviceSchemaList);
             } catch (TsdbException e) {
-                LOGGER.error("Register {} schema failed because ", config.DB_SWITCH, e);
+                LOGGER.error("Register schema failed because ", e);
             }
         } catch (TsdbException e) {
-            LOGGER.error("Initialize {} failed because ", config.DB_SWITCH, e);
+            LOGGER.error("Initialize failed because ", e);
         } finally {
             try {
                 dbWrapper.close();
             } catch (TsdbException e) {
-                LOGGER.error("Close {} failed because ", config.DB_SWITCH, e);
+                LOGGER.error("Close failed because ", e);
             }
         }
         CyclicBarrier barrier = new CyclicBarrier(config.CLIENT_NUMBER);
@@ -332,11 +332,11 @@ public class App {
     private static void serverMode(Config config) {
         PersistenceFactory persistenceFactory = new PersistenceFactory();
         ITestDataPersistence recorder = persistenceFactory.getPersistence();
-        File dir = new File(config.DB_DATA_PATH);
+        File dir = new File(config.MONITOR_FLAG_PATH);
 
         if (dir.exists() && dir.isDirectory()) {
             float abnormalValue = -1;
-            File file = new File(config.DB_DATA_PATH + "/log_stop_flag");
+            File file = new File(config.MONITOR_FLAG_PATH + "/log_stop_flag");
             Map<FileSize.FileSizeKinds, Float> fileSizeStatistics = new EnumMap<>(FileSize.FileSizeKinds.class);
             boolean isClientMonitor = config.BENCHMARK_WORK_MODE.equals(Constants.MODE_CLIENT_SYSTEM_INFO);
             if (isClientMonitor) {
@@ -378,7 +378,7 @@ public class App {
                 String time = sdf.format(new Date(start));
                 LOGGER.info(",{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
                     time,
-                    OpenFileNumber.getInstance().getPid(),
+                    OpenFileNumber.getInstance().getPID(),
                     proMem,
                     memRate,
                     ioUsageList.get(0),

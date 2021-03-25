@@ -4,278 +4,213 @@ import cn.edu.tsinghua.iotdb.benchmark.function.Function;
 import cn.edu.tsinghua.iotdb.benchmark.function.FunctionParam;
 import cn.edu.tsinghua.iotdb.benchmark.function.FunctionXml;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.DataSet;
+
 import java.io.InputStream;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Unmarshaller;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Unmarshaller;
 
 public class Config {
 
+	/** IoTDB通用参数 */
+	// IoTDB数据库版本
+	public String VERSION = "";
+	// 是否启用thrift的压缩机制
+	public boolean ENABLE_THRIFT_COMPRESSION = false;
+	// 是否使用IoTDB集群模式
+	public boolean USE_CLUSTER_DB = false;
+
+	/** 单节点IoTDB连接配置 */
+	// IoTDB单节点服务器HOST和PORT
 	public String HOST ="127.0.0.1";
 	public String PORT ="6667";
-	public List<String> CLUSTER_HOSTS = Arrays.asList("127.0.0.1:55560","127.0.0.1:55561","127.0.0"
-		+ ".1:55562");
-	public boolean USE_CLUSTER_DB = true;
 
-	/** 设备数量 */
-	public int DEVICE_NUMBER = 2;
+	/** IoTDB集群连接配置 */
+	// IoTDB集群服务器HOST和PORT
+	public List<String> CLUSTER_HOSTS = Arrays.asList("127.0.0.1:55560","127.0.0.1:55561","127.0.0.1:55562");
 
-	/** 设备和客户端是否绑定 */
-	public boolean IS_CLIENT_BIND = true;
-
-	/** if enable the thrift compression */
-	public boolean ENABLE_THRIFT_COMPRESSION = false;
-
-	/** 测试客户端线程数量 */
-	public int CLIENT_NUMBER = 2;
-
-	/** 每个设备的传感器数量 */
-	public int SENSOR_NUMBER = 5;
-
-	/** 数据采集步长 */
-	public long POINT_STEP = 7000;
-
-	/** 时间戳精度 */
-	public String TIMESTAMP_PRECISION = "ms";
-
-	/** 查询时间戳变化增加步长 */
-	public int STEP_SIZE = 1;
-
-  /**
-   * 操作执行间隔
-   */
+	/** Benchmark测试通用参数 */
+	// benchmark运行模式
+	public String BENCHMARK_WORK_MODE="";
+	// 各操作执行次数
+	public String OPERATION_PROPORTION = "1:1:1:1";
+	// 以上操作循环执行的重复次数
+	public long LOOP = 10000;
+	// 操作执行间隔
 	public int OP_INTERVAL = 0;
-
-	/** 存储组分配策略*/
-	public String SG_STRATEGY="hash";
-
-	/** 数据发送缓存条数 */
-	public int BATCH_SIZE = 1000;
-
-	/** 存储组数量 */
-	public int GROUP_NUMBER = 1;
-
-    /** 存储组前缀 **/
-    public String GROUP_NAME_PREFIX = "group_";
-
-	/** 数据类型 */
-	public String DATA_TYPE = "FLOAT";
-
-	/** 数据编码方式 */
-	public String ENCODING = "PLAIN";
-
-	/** 生成数据的小数保留位数 */
-	public int NUMBER_OF_DECIMAL_DIGIT = 2;
-
-	/** 数据压缩方式 */
-	public String COMPRESSOR = "UNCOMPRESSED";
-
-	/**是否为多设备批插入模式*/
-	public boolean MUL_DEV_BATCH = false;
-
-	/**数据库初始化等待时间ms*/
-	public long INIT_WAIT_TIME=5000;
-
-	/**是否为批插入乱序模式*/
-	public boolean IS_OVERFLOW = false;
-
-	/**乱序模式*/
-	public int OVERFLOW_MODE = 0;
-
-	/**批插入乱序比例*/
-	public double OVERFLOW_RATIO = 1.0;
-
-  /**
-   * 实际写入设备数占的比例
-   */
-	public double REAL_INSERT_RATE = 1.0;
-
-	/**使用集群模式**/
-	public boolean USE_CLUSTER = false;
-
-	/**集群模式下device的FIRST_INDEX**/
-	public int FIRST_INDEX = 0;
-
+	// 启动测试前是否删除旧数据
+	public boolean IS_DELETE_DATA = false;
+	// 测试客户端线程数量
+	public int CLIENT_NUMBER = 2;
+	// 设备和客户端是否绑定
+	public boolean IS_CLIENT_BIND = true;
+	// 输出进度日志的时间间隔
+	public int LOG_PRINT_INTERVAL = 5;
+	// 是否静默运行
 	public boolean IS_QUIET_MODE = true;
 
-	public int LOG_PRINT_INTERVAL = 5;
-
+	/** 写入测试通用参数 */
+	// IoTDB数据写入方式
+	public String INSERT_MODE = "jdbc";
+	// 存储组数
+	public int GROUP_NUMBER = 1;
+	// 存储组名称前缀
+	public String GROUP_NAME_PREFIX = "group_";
+	// 存储组分配策略
+	public String SG_STRATEGY="hash";
+	// 是否写入前先创建schema
+	public boolean CREATE_SCHEMA = true;
+	// 批写入数据行数
+	public int BATCH_SIZE = 1000;
+	// workload预生成数值的缓存大小
 	public int WORKLOAD_BUFFER_SIZE = 100;
 
+	/** 合成数据集数据量配置 */
+	// 总设备数量
+	public int DEVICE_NUMBER = 2;
+	// 实际写入设备数占的比例
+	public double REAL_INSERT_RATE = 1.0;
+	// 每个设备的传感器数量
+	public int SENSOR_NUMBER = 5;
+	// 传感器编号
+	public List<String> SENSOR_CODES = new ArrayList<String>();
+	// 合成数据起始时间
+	public String START_TIME = "2018-8-30T00:00:00+08:00";
+	// 时间戳精度
+	public String TIMESTAMP_PRECISION = "ms";
+	// 时间戳间隔
+	public long POINT_STEP = 7000;
+
+	/** 生成数据点时间戳顺序 */
+	// 是否为批插入乱序模式
+	public boolean IS_OVERFLOW = false;
+	// 乱序模式选择
+	public int OVERFLOW_MODE = 0;
+	// 批插入乱序比例
+	public double OVERFLOW_RATIO = 1.0;
+	// 泊松分布参数
 	public double LAMBDA = 3;
-
 	public int MAX_K = 10;
-
+	// 是否在顺序数据中使用随机时间间隔
 	public boolean IS_RANDOM_TIMESTAMP_INTERVAL = false;
 
-	public double CLIENT_MAX_WRT_RATE = 10000000.0;
-
-	public int LIMIT_CLAUSE_MODE = 0;
-
-	public String OPERATION_PROPORTION = "1:0:0:0:0:0:0:0:0:0";
-
+	/** 生成数据类型 */
+	// 插入时各数据类型的比例
 	public String INSERT_DATATYPE_PROPORTION = "1:1:1:1:1:1";
-
 	public List<Double> proportion;
-
+	// 各数据类型的编码方式
 	public String ENCODING_BOOLEAN = "PLAIN";
-
 	public String ENCODING_INT32 = "PLAIN";
-
 	public String ENCODING_INT64 = "PLAIN";
-
 	public String ENCODING_FLOAT = "PLAIN";
-
 	public String ENCODING_DOUBLE = "PLAIN";
-
 	public String ENCODING_TEXT = "PLAIN";
+	// 生成数据的小数保留位数
+	public int NUMBER_OF_DECIMAL_DIGIT = 2;
+	// 数据压缩方式
+	public String COMPRESSOR = "UNCOMPRESSED";
 
-	public String START_TIME = "2018-8-30T00:00:00+08:00";
-
-	/**系统性能检测时间间隔-2秒*/
- 	public int INTERVAL = 0;
-
- 	/**系统性能检测网卡设备名*/
- 	public String NET_DEVICE = "e";
-
- 	/**一个样例数据的存储组名称*/
- 	public String STORAGE_GROUP_NAME ;
-
- 	/**一个样例数据的时序名称*/
- 	public String TIMESERIES_NAME ;
-
- 	/**一个时序的数据类型*/
- 	public String TIMESERIES_TYPE ;
-
- 	/**时序数据取值范围*/
-	public String TIMESERIES_VALUE_SCOPE ;
-
-	/** 文件的名字 */
-	public String FILE_PATH;
-
-	/** 数据集的名字 */
-	public DataSet DATA_SET;
-
-	/** 数据集的传感器 */
-	public List<String> FIELDS;
-
-	/** 数据集的传感器的精度 */
-	public int[] PRECISION;
-
-	public String DB_DATA_PATH;
-
-	public List<String> IOTDB_DATA_DIR = new ArrayList<>();
-
-	public List<String> IOTDB_WAL_DIR = new ArrayList<>();
-
-	public List<String> IOTDB_SYSTEM_DIR = new ArrayList<>();
-
-	public List<String> SEQUENCE_DIR = new ArrayList<>();
-
-	public List<String> UNSEQUENCE_DIR = new ArrayList<>();
-
-	public int FIRST_DEVICE_INDEX = 0;
-
-	public long LOOP = 10000;
-
-	/** 线性 默认 9个 0.054 */
-	public double LINE_RATIO = 0.054;
-
-	/** 傅里叶函数 6个 0.036 */
-	public double SIN_RATIO = 0.036;
-
-	/** 方波 9个 0.054 */
-	public double SQUARE_RATIO = 0.054;
-
-	/** 随机数 默认 86个 0.512 */
-	public double RANDOM_RATIO = 0.512;
-
-	/** 常数 默认 58个 0.352 */
-	public double CONSTANT_RATIO = 0.352;
-
-	// ============各函数比例end============
+	/** 数据生成函数 */
+	// 随机数生成器种子
 	public long DATA_SEED = 666L;
-
-	/** 内置函数参数 */
+	// 线性 默认 9个 0.054
+	public double LINE_RATIO = 0.054;
+	// 傅里叶函数 6个 0.036
+	public double SIN_RATIO = 0.036;
+	// 方波 9个 0.054
+	public double SQUARE_RATIO = 0.054;
+	// 随机数 默认 86个 0.512
+	public double RANDOM_RATIO = 0.512;
+	// 常数 默认 58个 0.352
+	public double CONSTANT_RATIO = 0.352;
+	// 内置函数参数列表
 	private List<FunctionParam> LINE_LIST = new ArrayList<FunctionParam>();
 	private List<FunctionParam> SIN_LIST = new ArrayList<FunctionParam>();
 	private List<FunctionParam> SQUARE_LIST = new ArrayList<FunctionParam>();
 	private List<FunctionParam> RANDOM_LIST = new ArrayList<FunctionParam>();
 	private List<FunctionParam> CONSTANT_LIST = new ArrayList<FunctionParam>();
-
-	/** 设备编号 */
-	public List<String> DEVICE_CODES = new ArrayList<String>();
-
-	/** 传感器编号 */
-	public List<String> SENSOR_CODES = new ArrayList<String>();
-
-	/** 传感器对应的函数 */
+	// 传感器与其数据的生成函数之间的对应Map
 	public Map<String, FunctionParam> SENSOR_FUNCTION = new HashMap<String, FunctionParam>();
 
-	// 负载测试完是否删除数据
-	public boolean IS_DELETE_DATA = false;
-
-	//iotDB查询测试相关参数
-	public int QUERY_SENSOR_NUM = 1;
-	public int QUERY_DEVICE_NUM = 1;
-	public String QUERY_AGGREGATE_FUN = "";
-	public long QUERY_INTERVAL = DEVICE_NUMBER * POINT_STEP;
-	public double QUERY_LOWER_LIMIT = 0;
-	public boolean IS_EMPTY_PRECISE_POINT_QUERY = false;
-	public long TIME_UNIT = QUERY_INTERVAL / 2;
+	/** 查询测试参数 */
+	// 查询随机种子
 	public long QUERY_SEED = 1516580959202L;
-	public int QUERY_LIMIT_N = 1;
-	public int QUERY_LIMIT_OFFSET = 0;
-	public int QUERY_SLIMIT_N = 1;
-	public int QUERY_SLIMIT_OFFSET = 0;
+	// 每条查询语句中查询涉及的设备数量
+	public int QUERY_DEVICE_NUM = 1;
+	// 每条查询语句中查询涉及的传感器数量
+	public int QUERY_SENSOR_NUM = 1;
+	// 带起止时间的查询中开始时间与结束时间之间的时间间隔
+	public long QUERY_INTERVAL = DEVICE_NUMBER * POINT_STEP;
+	// 相邻两次查询时间过滤条件的起点变化步长
+	public int STEP_SIZE = 1;
+	// 聚合查询使用的聚合函数名
+	public String QUERY_AGGREGATE_FUN = "";
+	// UDF查询中使用的函数名
 	public String QUERY_RANGED_UDF = "";
+	// UDF注册时需要指定的完整类路径
 	public String QUERY_UDF_FULL_CLASS_NAME = "";
-	public boolean CREATE_SCHEMA = true;
+	// 真实数据集查询的时间筛选范围
 	public long REAL_QUERY_START_TIME = 0;
 	public long REAL_QUERY_STOP_TIME = Long.MAX_VALUE;
+	// 整个写操作的超时时间
 	public int WRITE_OPERATION_TIMEOUT_MS = 120000;
-  	public int READ_OPERATION_TIMEOUT_MS = 300000;
+	// 整个读操作的超时时间
+	public int READ_OPERATION_TIMEOUT_MS = 300000;
 
+	/** CSV文件导入参数 */
+	// CSV文件路径
+	public String IMPORT_DATA_FILE_PATH = "";
+	// 数据集元数据文件路径
+	public String METADATA_FILE_PATH = "";
+	// 批写入数据行数
+	public int BATCH_EXECUTE_COUNT = 5000;
 
-	//mysql相关参数
-	// mysql服务器URL以及用户名密码
+	/** 真实数据集导入参数 */
+	// 数据集文件路径
+	public String FILE_PATH;
+	// 数据集名称
+	public DataSet DATA_SET;
+	// 真实数据集的字段列表
+	public List<String> FIELDS;
+
+	/** Server Mode 参数 */
+	// 监测状态文件目录
+	public String MONITOR_FLAG_PATH;
+	// IoTDB数据盘所在目录
+	public List<String> IOTDB_DATA_DIR = new ArrayList<>();
+	public List<String> IOTDB_WAL_DIR = new ArrayList<>();
+	public List<String> IOTDB_SYSTEM_DIR = new ArrayList<>();
+	public List<String> SEQUENCE_DIR = new ArrayList<>();
+	public List<String> UNSEQUENCE_DIR = new ArrayList<>();
+	// 系统性能检测网卡设备名
+	public String NET_DEVICE = "e";
+	// 系统性能检测时间间隔-2s
+	public int INTERVAL = 0;
+
+	/** 测试结果持久化参数 */
+	// 选择结果持久化的写入数据库
 	public String TEST_DATA_PERSISTENCE = "None";
-	public boolean CSV_OUTPUT = true;
-
-	public String REMARK = "";
+	// 测试结果持久化数据库连接参数
 	public String TEST_DATA_STORE_IP = "";
 	public String TEST_DATA_STORE_PORT = "";
 	public String TEST_DATA_STORE_DB = "";
 	public String TEST_DATA_STORE_USER = "";
 	public String TEST_DATA_STORE_PW = "";
-	public String VERSION = "";
+	// 本次实验的备注信息
+	public String REMARK = "";
+	// 是否将结果输出至CSV文件
+	public boolean CSV_OUTPUT = true;
 
-	// DB参数
-	// 服务器URL
-	public String DB_URL = "http://localhost:8086";
-	// 使用的数据库名
-	public String DB_NAME = "test";
-
-	// 使用的数据库
-	public String DB_SWITCH = "IoTDB";
-
-	//benchmark 运行模式
-	public String BENCHMARK_WORK_MODE="";
-	//插入数据模式:
-	//IoTDB: jdbc,sessionByTablet,sessionByRecord,sessionByRecords
-	public String INSERT_MODE = "jdbc";
-	//the file path of import data
-	public String IMPORT_DATA_FILE_PATH = "";
-	//import csv数据文件时的BATCH
-	public int BATCH_EXECUTE_COUNT = 5000;
-	//mataData文件路径
-	public String METADATA_FILE_PATH = "";
-
+	/**
+	 * 初始化内置数据生成函数
+	 */
 	public void initInnerFunction() {
 		FunctionXml xml = null;
 		try {
@@ -368,29 +303,18 @@ public class Config {
 	}
 
 	/**
-	 * 根据设备数，初始化设备编号
+	 * 根据选择的真实数据集初始化字段列表
 	 */
-	void initDeviceCodes() {
-		for (int i = FIRST_DEVICE_INDEX; i < DEVICE_NUMBER + FIRST_DEVICE_INDEX; i++) {
-			String deviceCode = "d_" + i;
-			DEVICE_CODES.add(deviceCode);
-		}
-	}
-
-
 	void initRealDataSetSchema() {
 		switch (DATA_SET) {
 			case TDRIVE:
 				FIELDS = Arrays.asList("longitude", "latitude");
-				PRECISION = new int[]{5, 5};
 				break;
 			case REDD:
 				FIELDS = Arrays.asList("v");
-				PRECISION = new int[]{2};
 				break;
 			case GEOLIFE:
 				FIELDS = Arrays.asList("Latitude", "Longitude", "Zero", "Altitude");
-				PRECISION = new int[]{6, 6, 0, 12};
 				break;
 			default:
 				throw new RuntimeException(DATA_SET + " is not support");

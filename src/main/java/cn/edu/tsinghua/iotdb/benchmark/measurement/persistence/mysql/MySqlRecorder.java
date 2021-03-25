@@ -30,7 +30,7 @@ public class MySqlRecorder implements ITestDataPersistence {
   private String localName;
   private String day;
   private static final long EXP_TIME = System.currentTimeMillis();
-  private String projectID = String.format("%s_%s_%s_%s",config.BENCHMARK_WORK_MODE, config.DB_SWITCH, config.REMARK, sdf.format(new java.util.Date(EXP_TIME)));
+  private String projectID = String.format("IoTDB_%s_%s_%s",config.BENCHMARK_WORK_MODE, config.REMARK, sdf.format(new java.util.Date(EXP_TIME)));
   private Statement statement;
   private static final String URL_TEMPLATE = "jdbc:mysql://%s:%s/%s?user=%s&password=%s&useUnicode=true&characterEncoding=UTF8&useSSL=false&rewriteBatchedStatements=true";
   private String url = String.format(URL_TEMPLATE, config.TEST_DATA_STORE_IP,
@@ -229,31 +229,11 @@ public class MySqlRecorder implements ITestDataPersistence {
             "'MODE'", "'DEFAULT_TEST_MODE'");
         stat.addBatch(sql);
       }
-      switch (config.DB_SWITCH.trim()) {
-        case Constants.DB_IOT:
-        case Constants.DB_TIMESCALE:
-          sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
-              "'ServerIP'", "'" + config.HOST + "'");
-          stat.addBatch(sql);
-          break;
-        case Constants.DB_INFLUX:
-        case Constants.DB_OPENTS:
-        case Constants.DB_KAIROS:
-        case Constants.DB_CTS:
-          String host = config.DB_URL
-              .substring(config.DB_URL.lastIndexOf('/') + 1, config.DB_URL.lastIndexOf(':'));
-          sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
-              "'ServerIP'", "'" + host + "'");
-          stat.addBatch(sql);
-          break;
-        default:
-          throw new SQLException("unsupported database " + config.DB_SWITCH);
-      }
       sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
-          "'CLIENT'", "'" + localName + "'");
+          "'ServerIP'", "'" + config.HOST + "'");
       stat.addBatch(sql);
       sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
-          "'DB_SWITCH'", "'" + config.DB_SWITCH + "'");
+          "'CLIENT'", "'" + localName + "'");
       stat.addBatch(sql);
       sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
           "'VERSION'", "'" + config.VERSION + "'");
@@ -278,11 +258,6 @@ public class MySqlRecorder implements ITestDataPersistence {
             "'查询数据集传感器数'", "'" + config.SENSOR_NUMBER
                 + "'");
         stat.addBatch(sql);
-        if (config.DB_SWITCH.equals(Constants.DB_IOT)) {
-          sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
-              "'IOTDB编码方式'", "'" + config.ENCODING + "'");
-          stat.addBatch(sql);
-        }
 
         sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
             "'QUERY_DEVICE_NUM'", "'" + config.QUERY_DEVICE_NUM
@@ -302,12 +277,6 @@ public class MySqlRecorder implements ITestDataPersistence {
           stat.addBatch(sql);
         }
         sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
-            "'MUL_DEV_BATCH'", "'" + config.MUL_DEV_BATCH + "'");
-        stat.addBatch(sql);
-        sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
-            "'DEVICE_NUMBER'", "'" + config.DEVICE_NUMBER + "'");
-        stat.addBatch(sql);
-        sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
             "'GROUP_NUMBER'", "'" + config.GROUP_NUMBER + "'");
         stat.addBatch(sql);
         sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
@@ -322,11 +291,6 @@ public class MySqlRecorder implements ITestDataPersistence {
         sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
             "'POINT_STEP'", "'" + config.POINT_STEP + "'");
         stat.addBatch(sql);
-        if (config.DB_SWITCH.equals(Constants.DB_IOT)) {
-          sql = String.format(SAVE_CONFIG, "'" + projectID + "'",
-              "'ENCODING'", "'" + config.ENCODING + "'");
-          stat.addBatch(sql);
-        }
       }
       stat.executeBatch();
     } catch (SQLException e) {

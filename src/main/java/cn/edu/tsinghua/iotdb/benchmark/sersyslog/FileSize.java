@@ -37,13 +37,7 @@ public class FileSize {
     }
 
     private FileSize(){
-        switch (config.DB_SWITCH){
-            case Constants.DB_IOT:
-            case Constants.BENCHMARK_IOTDB:
-                break;
-            default:
-                log.error("unsupported db name: {}", config.DB_SWITCH);
-        }
+
     }
 
     public static FileSize getInstance(){

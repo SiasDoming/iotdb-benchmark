@@ -10,16 +10,21 @@ import cn.edu.tsinghua.iotdb.benchmark.measurement.enums.SystemMetrics;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.enums.TotalOperationResult;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.enums.TotalResult;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.persistence.ITestDataPersistence;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+
 import java.text.SimpleDateFormat;
+
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class IotdbRecorder implements ITestDataPersistence {
 
@@ -31,7 +36,7 @@ public class IotdbRecorder implements ITestDataPersistence {
     private static final long EXP_TIME = System.currentTimeMillis();
     private static final String PATH_PREFIX = Constants.ROOT_SERIES_NAME + "." + config.TEST_DATA_STORE_DB;
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_hh_mm_ss_SSS");
-    private String projectID = String.format("%s_%s_%s", config.DB_SWITCH, config.REMARK, sdf.format(new java.util.Date(EXP_TIME)));
+    private String projectID = String.format("IoTDB_%s_%s_%s",config.BENCHMARK_WORK_MODE, config.REMARK, sdf.format(new java.util.Date(EXP_TIME)));
     private Statement globalStatement;
     private static final String THREAD_PREFIX = "pool-1-thread-";
     private String insertSqlPrefix = "insert into " + PATH_PREFIX;

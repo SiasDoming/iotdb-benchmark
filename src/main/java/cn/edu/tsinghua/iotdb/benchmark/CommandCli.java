@@ -16,6 +16,9 @@ public class CommandCli {
 	
 	private final String CONFIG_ARGS = "cf";
 	private final String CONFIG_NAME = "config file";
+
+	private final String LIST_ARGS = "lf";
+	private final String LIST_NAME = "UDF list file";
 	
 	private static final int MAX_HELP_CONSOLE_WIDTH = 88;
 	
@@ -36,7 +39,15 @@ public class CommandCli {
 				.required(false)
 				.build();
 		options.addOption(config);
-		
+
+		Option list = Option.builder(LIST_ARGS)
+				.argName(LIST_NAME)
+				.hasArg()
+				.desc("UDF list json file path (default set as ./conf/TestUDFList.json)")
+				.required(false)
+				.build();
+		options.addOption(list);
+
 		return options;
 	}
 	
@@ -50,6 +61,10 @@ public class CommandCli {
 
 			if(commandLine.hasOption(CONFIG_ARGS)) {
 				System.setProperty(Constants.BENCHMARK_CONF, commandLine.getOptionValue(CONFIG_ARGS));
+			}
+
+			if(commandLine.hasOption(LIST_ARGS)) {
+				System.setProperty(Constants.BENCHMARK_UDF_LIST, commandLine.getOptionValue(LIST_ARGS));
 			}
 			
 		} catch (ParseException e) {

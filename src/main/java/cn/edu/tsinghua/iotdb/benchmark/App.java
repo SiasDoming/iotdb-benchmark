@@ -61,7 +61,7 @@ public class App {
         if (!cli.init(args)) {
             return;
         }
-        Config config = ConfigDescriptor.getInstance().getConfig();
+        config = ConfigDescriptor.getInstance().getConfig();
         switch (config.BENCHMARK_WORK_MODE.trim()) {
             case Constants.MODE_TEST_WITH_DEFAULT_PATH:
                 testWithDefaultPath(config);

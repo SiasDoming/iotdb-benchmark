@@ -4,14 +4,13 @@ import cn.edu.tsinghua.iotdb.benchmark.workload.reader.DataSet;
 
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSONReader;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,6 +32,7 @@ public class ConfigDescriptor {
   private ConfigDescriptor() {
     config = new Config();
     loadProps();
+    loadListJson();
     config.initInnerFunction();
     config.initSensorCodes();
     config.initSensorFunction();
@@ -175,8 +175,6 @@ public class ConfigDescriptor {
                 .parseInt(properties.getProperty("STEP_SIZE", config.STEP_SIZE + ""));
         config.QUERY_AGGREGATE_FUN = properties
                 .getProperty("QUERY_AGGREGATE_FUN", config.QUERY_AGGREGATE_FUN);
-        config.QUERY_RANGED_UDF = properties.getProperty("QUERY_RANGED_UDF", config.QUERY_RANGED_UDF);
-        config.QUERY_UDF_FULL_CLASS_NAME = properties.getProperty("QUERY_UDF_FULL_CLASS_NAME", config.QUERY_UDF_FULL_CLASS_NAME);
         config.REAL_QUERY_START_TIME = Long
                 .parseLong(properties.getProperty("REAL_QUERY_START_TIME", config.REAL_QUERY_START_TIME + ""));
         config.REAL_QUERY_STOP_TIME = Long
@@ -248,6 +246,30 @@ public class ConfigDescriptor {
       }
     } else {
       LOGGER.warn("{} No config file path, use default config", Constants.CONSOLE_PREFIX);
+    }
+  }
+
+  private void loadListJson() {
+    String filePath = System.getProperty(Constants.BENCHMARK_UDF_LIST, "conf/TestUDFList.json");
+    if (filePath != null) {
+      JSONReader jsonReader;
+      try {
+        jsonReader = new JSONReader(new FileReader(filePath));
+      } catch (FileNotFoundException e) {
+        LOGGER.warn("Fail to find UDF list file {}", filePath);
+        return;
+      }
+      try {
+        jsonReader.startArray();
+        while (jsonReader.hasNext()) {
+          JSONObject udfObject = (JSONObject) jsonReader.readObject();
+          config.QUERY_UDF_NAME_LIST.add(udfObject.get("UDFName").toString());
+          config.QUERY_UDF_FULL_CLASS_NAME.add(udfObject.get("FullClassName").toString());
+        }
+        jsonReader.endArray();
+      } catch (Exception e) {
+        LOGGER.error("Fail to parse UDF list because ", e);
+      }
     }
   }
 

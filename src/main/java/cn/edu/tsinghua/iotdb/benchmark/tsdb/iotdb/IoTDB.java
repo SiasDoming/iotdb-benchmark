@@ -233,6 +233,7 @@ public class IoTDB implements IDatabase {
         return new Status(false, e, "UDF registration failed");
       }
     }
+    // to dos: 更新sql语句，支持按说明输入参数，支持多输入，支持输入按照数据类型筛选
     String rangedUDFQuerySqlHead = getRangedUDFQuerySqlHead(rangedUDFQuery.getDeviceSchema(),
             rangedUDFQuery.getUdfName());
     String sql = addWhereTimeClause(rangedUDFQuerySqlHead, rangedUDFQuery.getStartTimestamp(),

@@ -5,6 +5,7 @@ import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 import java.util.List;
 
 public class RangedUDFQuery extends RangeQuery{
+    // 增加更多信息，匹配JSON输入内容
     private String udfName;
     private String udfFullClassName;
 

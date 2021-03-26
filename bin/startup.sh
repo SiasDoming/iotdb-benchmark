@@ -9,6 +9,9 @@ echo $BENCHMARK_HOME
 BENCHMARK_CONF="$BENCHMARK_HOME"/conf/config.properties
 echo $BENCHMARK_CONF
 
+BENCHMARK_UDF_LIST="$BENCHMARK_HOME"/conf/TestUDFList.json
+echo $BENCHMARK_UDF_LIST
+
 MAIN_CLASS=cn.edu.tsinghua.iotdb.benchmark.App
 
 CLASSPATH="."
@@ -29,6 +32,6 @@ else
 fi
 
 cd $BENCHMARK_HOME
-exec "$JAVA" -Duser.timezone=GMT+8 -Dlogback.configurationFile=${BENCHMARK_HOME}/conf/logback.xml  -cp "$CLASSPATH" "$MAIN_CLASS" "$@" -cf "$BENCHMARK_CONF"
+exec "$JAVA" -Duser.timezone=GMT+8 -Dlogback.configurationFile=${BENCHMARK_HOME}/conf/logback.xml  -cp "$CLASSPATH" "$MAIN_CLASS" "$@" -cf "$BENCHMARK_CONF" -lf "$BENCHMARK_UDF_LIST"
 
 exit $?

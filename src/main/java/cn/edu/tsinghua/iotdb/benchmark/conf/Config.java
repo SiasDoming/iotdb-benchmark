@@ -152,10 +152,13 @@ public class Config {
 	public int STEP_SIZE = 1;
 	// 聚合查询使用的聚合函数名
 	public String QUERY_AGGREGATE_FUN = "";
-	// UDF查询中使用的函数名
-	public String QUERY_RANGED_UDF = "";
-	// UDF注册时需要指定的完整类路径
-	public String QUERY_UDF_FULL_CLASS_NAME = "";
+	// ************************************************* //
+	// 更新UDF参数，支持列表，写初始化函数从文件解析
+	// 查询测试的UDF函数列表
+	public List<String> QUERY_UDF_NAME_LIST = new ArrayList<>();
+	public List<String> QUERY_UDF_FULL_CLASS_NAME = new ArrayList<>();
+	// UDF测试循环计数
+	public int QUERY_UDF_LOOP = 0;
 	// 真实数据集查询的时间筛选范围
 	public long REAL_QUERY_START_TIME = 0;
 	public long REAL_QUERY_STOP_TIME = Long.MAX_VALUE;
@@ -318,6 +321,16 @@ public class Config {
 				break;
 			default:
 				throw new RuntimeException(DATA_SET + " is not support");
+		}
+	}
+
+	public int getAndIncrementQueryUDFLoop() {
+		QUERY_UDF_LOOP ++;
+		if (QUERY_UDF_LOOP == QUERY_UDF_NAME_LIST.size()) {
+			QUERY_UDF_LOOP = 0;
+			return QUERY_UDF_NAME_LIST.size()-1;
+		} else {
+			return QUERY_UDF_LOOP-1;
 		}
 	}
 

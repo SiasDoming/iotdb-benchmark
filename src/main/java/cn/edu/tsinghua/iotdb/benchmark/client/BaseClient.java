@@ -100,7 +100,10 @@ public abstract class BaseClient extends Client implements Runnable {
           break;
         case RANGED_UDF_QUERY:
           try {
-            dbWrapper.rangedUDFQuery(syntheticWorkload.getRangedUDFQuery());
+            // to dos: 持续更新循环机制，保证与config文件修改一致
+            for (int i = 0; i < config.QUERY_UDF_NAME_LIST.size(); i++) {
+              dbWrapper.rangedUDFQuery(syntheticWorkload.getRangedUDFQuery());
+            }
           } catch (WorkloadException e) {
             LOGGER.error("Fail to do ranged UDF query because ", e);
           }

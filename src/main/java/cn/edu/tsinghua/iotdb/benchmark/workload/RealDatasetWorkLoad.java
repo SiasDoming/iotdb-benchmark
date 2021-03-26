@@ -99,7 +99,8 @@ public class RealDatasetWorkLoad implements IWorkload {
 
   @Override
   public RangedUDFQuery getRangedUDFQuery() {
-    return new RangedUDFQuery(deviceSchemaList, startTime, endTime, config.QUERY_RANGED_UDF, config.QUERY_UDF_FULL_CLASS_NAME);
+    int currentUDFLoop = config.getAndIncrementQueryUDFLoop();
+    return new RangedUDFQuery(deviceSchemaList, startTime, endTime, config.QUERY_UDF_NAME_LIST.get(currentUDFLoop), config.QUERY_UDF_FULL_CLASS_NAME.get(currentUDFLoop));
   }
 
   static String calGroupIdStr(String deviceId, int groupNum) {

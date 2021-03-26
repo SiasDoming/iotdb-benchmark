@@ -285,10 +285,12 @@ public class SyntheticWorkload implements IWorkload {
 
   @Override
   public RangedUDFQuery getRangedUDFQuery() throws WorkloadException{
+    // to dos: 更新RangedUDFQuery构造输入参数，支持复杂参数读取和输入
     List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
     long startTimestamp = getQueryStartTimestamp(Operation.RANGED_UDF_QUERY);
     long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
-    return new RangedUDFQuery(queryDevices, startTimestamp, endTimestamp, config.QUERY_RANGED_UDF, config.QUERY_UDF_FULL_CLASS_NAME);
+    int currentUDFLoop = config.getAndIncrementQueryUDFLoop();
+    return new RangedUDFQuery(queryDevices, startTimestamp, endTimestamp, config.QUERY_UDF_NAME_LIST.get(currentUDFLoop), config.QUERY_UDF_FULL_CLASS_NAME.get(currentUDFLoop));
   }
 
   private static long getTimestampConst(String timePrecision) {

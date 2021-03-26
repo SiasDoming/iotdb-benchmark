@@ -14,6 +14,7 @@ public class Constants {
     public static final String ROOT_SERIES_NAME = "root";
     public static final String CONSOLE_PREFIX = "IotDB-benchmark>";
     public static final String BENCHMARK_CONF = "benchmark-conf";
+    public static final String BENCHMARK_UDF_LIST = "benchmark-udf-list";
 
     public static final String MYSQL_DRIVENAME = "com.mysql.jdbc.Driver";
 

@@ -228,7 +228,7 @@ public class IoTDB implements IDatabase {
   public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
     if (!IS_UDF_REGISTRATED) {
       try {
-        registerUDF(rangedUDFQuery.getUdfName(), rangedUDFQuery.getUdfFullClassName());
+        registerUDF();
       } catch (Exception e) {
         return new Status(false, e, "UDF registration failed");
       }
@@ -366,18 +366,23 @@ public class IoTDB implements IDatabase {
     return addFromClause(devices, builder);
   }
 
-  public void registerUDF(String udfName, String udfFullClassName) throws TsdbException {
+  public void registerUDF() throws TsdbException {
     try {
       Session udfSession = new Session(config.HOST, config.PORT, Constants.USER, Constants.PASSWD);
       udfSession.open(config.ENABLE_THRIFT_COMPRESSION);
-      String registrationSql = String.format("CREATE FUNCTION %s AS \"%s\"", udfName, udfFullClassName);
-      udfSession.executeNonQueryStatement(registrationSql);
+      for (int i = 0; i < config.QUERY_UDF_NAME_LIST.size(); i++) {
+        String udfName = config.QUERY_UDF_NAME_LIST.get(i);
+        String udfFullClassName = config.QUERY_UDF_FULL_CLASS_NAME.get(i);
+        String registrationSql = String.format("CREATE FUNCTION %s AS \"%s\"", udfName, udfFullClassName);
+        udfSession.executeNonQueryStatement(registrationSql);
+      }
       udfSession.close();
       IS_UDF_REGISTRATED = true;
     } catch (Exception e) {
       // ignore if given udf is already registrated
-      if (!e.getMessage().contains(ALREADY_REGISTRATED_KEYWORTD) && !e.getMessage().contains("300")) {
+      if (!e.getMessage().contains(ALREADY_REGISTRATED_KEYWORTD)) {
         LOGGER.error("Register IoTDB UDF failed because ", e);
+        IS_UDF_REGISTRATED = true;
         throw new TsdbException(e);
       }
     }

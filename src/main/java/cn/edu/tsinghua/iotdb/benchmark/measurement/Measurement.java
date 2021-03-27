@@ -8,39 +8,64 @@ import cn.edu.tsinghua.iotdb.benchmark.measurement.enums.TotalOperationResult;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.enums.TotalResult;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.persistence.ITestDataPersistence;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.persistence.PersistenceFactory;
-import com.clearspring.analytics.stream.quantile.TDigest;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.clearspring.analytics.stream.quantile.TDigest;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.EnumMap;
-import java.util.Map;
+
 import java.text.SimpleDateFormat;
+
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Date;
 
 public class Measurement {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Measurement.class);
   private static Config config = ConfigDescriptor.getInstance().getConfig();
-  private static Map<Operation, TDigest> operationLatencyDigest = new EnumMap<>(Operation.class);
-  private static Map<Operation, Double> operationLatencySumAllClient = new EnumMap<>(Operation.class);
-  private double createSchemaTime;
-  private double elapseTime;
-  private Map<Operation, Double> operationLatencySumThisClient;
-  private Map<Operation, Long> okOperationNumMap;
-  private Map<Operation, Long> failOperationNumMap;
-  private Map<Operation, Long> okPointNumMap;
-  private Map<Operation, Long> failPointNumMap;
+  private static Map<Operation, Map<String, TDigest>> operationLatencyDigest = new EnumMap<>(Operation.class);
+  private static Map<Operation, Map<String, Double>> operationLatencySumAllClient = new EnumMap<>(Operation.class);
+  private static final String OPERATION_ITEM = "%-30s";
   private static final String RESULT_ITEM = "%-20s";
   private static final String LATENCY_ITEM = "%-12s";
   private static final int COMPRESSION = 100;
 
+  private double createSchemaTime;
+  private double elapseTime;
+  private Map<Operation, Map<String, Long>> okOperationNumMap;
+  private Map<Operation, Map<String, Long>> failOperationNumMap;
+  private Map<Operation, Map<String, Long>> okPointNumMap;
+  private Map<Operation, Map<String, Long>> failPointNumMap;
+  private Map<Operation, Map<String, Double>> operationLatencySumThisClient;
+
   static {
     for (Operation operation : Operation.values()) {
-      operationLatencyDigest.put(operation, new TDigest(COMPRESSION));
-      operationLatencySumAllClient.put(operation, 0D);
+      operationLatencyDigest.put(operation, new HashMap<>());
+      operationLatencySumAllClient.put(operation, new HashMap<>());
+      switch (operation) {
+        case INGESTION:
+        case RANGE_QUERY:
+          operationLatencyDigest.get(operation).put("NONE", new TDigest(COMPRESSION));
+          operationLatencySumAllClient.get(operation).put("NONE", 0D);
+          break;
+        case AGG_RANGE_QUERY:
+          operationLatencyDigest.get(operation).put(config.QUERY_AGGREGATE_FUN, new TDigest(COMPRESSION));
+          operationLatencySumAllClient.get(operation).put(config.QUERY_AGGREGATE_FUN, 0D);
+          break;
+        case RANGED_UDF_QUERY:
+          for (String udfName : config.QUERY_UDF_NAME_LIST) {
+            operationLatencyDigest.get(operation).put(udfName, new TDigest(COMPRESSION));
+            operationLatencySumAllClient.get(operation).put(udfName, 0D);
+          }
+          break;
+      }
     }
   }
 
@@ -51,55 +76,219 @@ public class Measurement {
     failPointNumMap = new EnumMap<>(Operation.class);
     operationLatencySumThisClient = new EnumMap<>(Operation.class);
     for (Operation operation : Operation.values()) {
-      okOperationNumMap.put(operation, 0L);
-      failOperationNumMap.put(operation, 0L);
-      okPointNumMap.put(operation, 0L);
-      failPointNumMap.put(operation, 0L);
-      operationLatencySumThisClient.put(operation, 0D);
+      okOperationNumMap.put(operation, new HashMap<>());
+      failOperationNumMap.put(operation, new HashMap<>());
+      okPointNumMap.put(operation, new HashMap<>());
+      failPointNumMap.put(operation, new HashMap<>());
+      operationLatencySumThisClient.put(operation, new HashMap<>());
+      switch (operation) {
+        case INGESTION:
+        case RANGE_QUERY:
+          okOperationNumMap.get(operation).put("NONE", 0L);
+          failOperationNumMap.get(operation).put("NONE", 0L);
+          okPointNumMap.get(operation).put("NONE", 0L);
+          failPointNumMap.get(operation).put("NONE", 0L);
+          operationLatencySumThisClient.get(operation).put("NONE", 0D);
+          break;
+        case AGG_RANGE_QUERY:
+          okOperationNumMap.get(operation).put(config.QUERY_AGGREGATE_FUN, 0L);
+          failOperationNumMap.get(operation).put(config.QUERY_AGGREGATE_FUN, 0L);
+          okPointNumMap.get(operation).put(config.QUERY_AGGREGATE_FUN, 0L);
+          failPointNumMap.get(operation).put(config.QUERY_AGGREGATE_FUN, 0L);
+          operationLatencySumThisClient.get(operation).put(config.QUERY_AGGREGATE_FUN, 0D);
+          break;
+        case RANGED_UDF_QUERY:
+          for (String udfName : config.QUERY_UDF_NAME_LIST) {
+            okOperationNumMap.get(operation).put(udfName, 0L);
+            failOperationNumMap.get(operation).put(udfName, 0L);
+            okPointNumMap.get(operation).put(udfName, 0L);
+            failPointNumMap.get(operation).put(udfName, 0L);
+            operationLatencySumThisClient.get(operation).put(udfName, 0D);
+          }
+          break;
+      }
     }
   }
 
-  private Map<Operation, Double> getOperationLatencySumThisClient() {
+  private Map<Operation, Map<String, Double>> getOperationLatencySumThisClient() {
     return operationLatencySumThisClient;
   }
 
   private long getOkOperationNum(Operation operation) {
-    return okOperationNumMap.get(operation);
+    switch (operation) {
+      case INGESTION:
+      case RANGE_QUERY:
+        return getOkOperationNum(operation, "NONE");
+      case AGG_RANGE_QUERY:
+      case RANGED_UDF_QUERY:
+        long sum = 0L;
+        for (Long value : okOperationNumMap.get(operation).values()) {
+          sum += value;
+        }
+        return sum;
+      default:
+        return 0L;
+    }
+  }
+
+  private long getOkOperationNum(Operation operation, String funcName) {
+    return okOperationNumMap.get(operation).get(funcName);
   }
 
   private long getFailOperationNum(Operation operation) {
-    return failOperationNumMap.get(operation);
+    switch (operation) {
+      case INGESTION:
+      case RANGE_QUERY:
+        return getFailOperationNum(operation, "NONE");
+      case AGG_RANGE_QUERY:
+      case RANGED_UDF_QUERY:
+        long sum = 0L;
+        for (Long value : failOperationNumMap.get(operation).values()) {
+          sum += value;
+        }
+        return sum;
+      default:
+        return 0L;
+    }
+  }
+
+  private long getFailOperationNum(Operation operation, String funcName) {
+    return failOperationNumMap.get(operation).get(funcName);
   }
 
   private long getOkPointNum(Operation operation) {
-    return okPointNumMap.get(operation);
+    switch (operation) {
+      case INGESTION:
+      case RANGE_QUERY:
+        return getOkPointNum(operation, "NONE");
+      case AGG_RANGE_QUERY:
+      case RANGED_UDF_QUERY:
+        long sum = 0L;
+        for (Long value : okPointNumMap.get(operation).values()) {
+          sum += value;
+        }
+        return sum;
+      default:
+        return 0L;
+    }
+  }
+
+  private long getOkPointNum(Operation operation, String funcName) {
+    return okPointNumMap.get(operation).get(funcName);
   }
 
   private long getFailPointNum(Operation operation) {
-    return failPointNumMap.get(operation);
+    switch (operation) {
+      case INGESTION:
+      case RANGE_QUERY:
+        return getFailPointNum(operation, "NONE");
+      case AGG_RANGE_QUERY:
+      case RANGED_UDF_QUERY:
+        long sum = 0L;
+        for (Long value : failPointNumMap.get(operation).values()) {
+          sum += value;
+        }
+        return sum;
+      default:
+        return 0L;
+    }
   }
 
-  public void addOperationLatency(Operation op, double latency) {
-    synchronized (operationLatencyDigest.get(op)) {
-      operationLatencyDigest.get(op).add(latency);
+  private long getFailPointNum(Operation operation, String funcName) {
+    return failPointNumMap.get(operation).get(funcName);
+  }
+
+  public void addOperationLatency(Operation operation, double latency) {
+    switch (operation) {
+      case INGESTION:
+      case RANGE_QUERY:
+        addOperationLatency(operation, "NONE", latency);
+        break;
+      case AGG_RANGE_QUERY:
+      case RANGED_UDF_QUERY:
+      default:
+        LOGGER.debug("Unspecified operation while recording {} latency", operation.getName());
+        break;
     }
-    operationLatencySumThisClient.put(op, operationLatencySumThisClient.get(op) + latency);
+  }
+
+  public void addOperationLatency(Operation operation, String funcName, double latency) {
+    synchronized (operationLatencyDigest.get(operation).get(funcName)) {
+      operationLatencyDigest.get(operation).get(funcName).add(latency);
+    }
+    operationLatencySumThisClient.get(operation).put(funcName, operationLatencySumThisClient.get(operation).get(funcName) + latency);
   }
 
   public void addOkPointNum(Operation operation, int pointNum) {
-    okPointNumMap.put(operation, okPointNumMap.get(operation) + pointNum);
+    switch (operation) {
+      case INGESTION:
+      case RANGE_QUERY:
+        addOkPointNum(operation, "NONE", pointNum);
+        break;
+      case AGG_RANGE_QUERY:
+      case RANGED_UDF_QUERY:
+      default:
+        LOGGER.debug("Unspecified operation while recording {} ok point number", operation.getName());
+        break;
+    }
+  }
+
+  public void addOkPointNum(Operation operation, String funcName, int pointNum) {
+    okPointNumMap.get(operation).put(funcName, okPointNumMap.get(operation).get(funcName) + pointNum);
   }
 
   public void addFailPointNum(Operation operation, int pointNum) {
-    failPointNumMap.put(operation, failPointNumMap.get(operation) + pointNum);
+    switch (operation) {
+      case INGESTION:
+      case RANGE_QUERY:
+        addFailPointNum(operation, "NONE", pointNum);
+        break;
+      case AGG_RANGE_QUERY:
+      case RANGED_UDF_QUERY:
+      default:
+        LOGGER.debug("Unspecified operation while recording {} fail point number", operation.getName());
+        break;
+    }
+  }
+
+  public void addFailPointNum(Operation operation, String funcName, int pointNum) {
+    failPointNumMap.get(operation).put(funcName, failPointNumMap.get(operation).get(funcName) + pointNum);
   }
 
   public void addOkOperationNum(Operation operation) {
-    okOperationNumMap.put(operation, okOperationNumMap.get(operation) + 1);
+    switch (operation) {
+      case INGESTION:
+      case RANGE_QUERY:
+        addOkOperationNum(operation, "NONE");
+        break;
+      case AGG_RANGE_QUERY:
+      case RANGED_UDF_QUERY:
+      default:
+        LOGGER.debug("Unspecified operation while recording {} ok operation number", operation.getName());
+        break;
+    }
+  }
+
+  public void addOkOperationNum(Operation operation, String funcName) {
+    okOperationNumMap.get(operation).put(funcName, okOperationNumMap.get(operation).get(funcName) + 1);
   }
 
   public void addFailOperationNum(Operation operation) {
-    failOperationNumMap.put(operation, failOperationNumMap.get(operation) + 1);
+    switch (operation) {
+      case INGESTION:
+      case RANGE_QUERY:
+        addFailOperationNum(operation, "NONE");
+        break;
+      case AGG_RANGE_QUERY:
+      case RANGED_UDF_QUERY:
+      default:
+        LOGGER.debug("Unspecified operation while recording {} fail operation number", operation.getName());
+        break;
+    }
+  }
+
+  public void addFailOperationNum(Operation operation, String funcName) {
+    failOperationNumMap.get(operation).put(funcName, failOperationNumMap.get(operation).get(funcName) + 1);
   }
 
   public double getCreateSchemaTime() {
@@ -125,39 +314,40 @@ public class Measurement {
    */
   public void mergeMeasurement(Measurement m) {
     for (Operation operation : Operation.values()) {
-      okOperationNumMap
-              .put(operation, okOperationNumMap.get(operation) + m.getOkOperationNum(operation));
-      failOperationNumMap
-              .put(operation, failOperationNumMap.get(operation) + m.getFailOperationNum(operation));
-      okPointNumMap.put(operation, okPointNumMap.get(operation) + m.getOkPointNum(operation));
-      failPointNumMap.put(operation, failPointNumMap.get(operation) + m.getFailPointNum(operation));
-      // set operationLatencySumThisClient of this measurement the largest latency sum among all threads
-      if(operationLatencySumThisClient.get(operation) < m.getOperationLatencySumThisClient().get(operation)) {
-        operationLatencySumThisClient.put(operation, m.getOperationLatencySumThisClient().get(operation));
+      for (String funcName : okOperationNumMap.get(operation).keySet()) {
+        okOperationNumMap.get(operation).put(funcName, okOperationNumMap.get(operation).get(funcName) + m.getOkOperationNum(operation, funcName));
+        failOperationNumMap.get(operation).put(funcName, failOperationNumMap.get(operation).get(funcName) + m.getFailOperationNum(operation, funcName));
+        okPointNumMap.get(operation).put(funcName, okPointNumMap.get(operation).get(funcName) + m.getOkPointNum(operation, funcName));
+        failPointNumMap.get(operation).put(funcName, failPointNumMap.get(operation).get(funcName) + m.getFailPointNum(operation, funcName));
+        // set operationLatencySumThisClient of this measurement the largest latency sum among all threads
+        if(operationLatencySumThisClient.get(operation).get(funcName) < m.getOperationLatencySumThisClient().get(operation).get(funcName)) {
+          operationLatencySumThisClient.get(operation).put(funcName, m.getOperationLatencySumThisClient().get(operation).get(funcName));
+        }
+        operationLatencySumAllClient.get(operation).put(funcName,
+                operationLatencySumAllClient.get(operation).get(funcName) + m.getOperationLatencySumThisClient().get(operation).get(funcName));
       }
-      operationLatencySumAllClient.put(operation,
-              operationLatencySumAllClient.get(operation) + m.getOperationLatencySumThisClient().get(operation));
     }
-
   }
 
   public void calculateMetrics() {
     for (Operation operation : Operation.values()) {
-      double avgLatency = 0;
-      if (okOperationNumMap.get(operation) != 0) {
-        avgLatency = operationLatencySumAllClient.get(operation) / okOperationNumMap.get(operation);
-        Metric.AVG_LATENCY.getTypeValueMap().put(operation, avgLatency);
-        Metric.MAX_THREAD_LATENCY_SUM.getTypeValueMap().put(operation, operationLatencySumThisClient.get(operation));
-        Metric.MIN_LATENCY.getTypeValueMap().put(operation, operationLatencyDigest.get(operation).quantile(0.0));
-        Metric.MAX_LATENCY.getTypeValueMap().put(operation, operationLatencyDigest.get(operation).quantile(1.0));
-        Metric.P10_LATENCY.getTypeValueMap().put(operation, operationLatencyDigest.get(operation).quantile(0.1));
-        Metric.P25_LATENCY.getTypeValueMap().put(operation, operationLatencyDigest.get(operation).quantile(0.25));
-        Metric.MEDIAN_LATENCY.getTypeValueMap().put(operation, operationLatencyDigest.get(operation).quantile(0.5));
-        Metric.P75_LATENCY.getTypeValueMap().put(operation, operationLatencyDigest.get(operation).quantile(0.75));
-        Metric.P90_LATENCY.getTypeValueMap().put(operation, operationLatencyDigest.get(operation).quantile(0.90));
-        Metric.P95_LATENCY.getTypeValueMap().put(operation, operationLatencyDigest.get(operation).quantile(0.95));
-        Metric.P99_LATENCY.getTypeValueMap().put(operation, operationLatencyDigest.get(operation).quantile(0.99));
-        Metric.P999_LATENCY.getTypeValueMap().put(operation, operationLatencyDigest.get(operation).quantile(0.999));
+      for (String funcName : okOperationNumMap.get(operation).keySet()) {
+        double avgLatency = 0;
+        if (okOperationNumMap.get(operation).get(funcName) != 0) {
+          avgLatency = operationLatencySumAllClient.get(operation).get(funcName) / okOperationNumMap.get(operation).get(funcName);
+          Metric.AVG_LATENCY.getTypeValueMap().get(operation).put(funcName, avgLatency);
+          Metric.MAX_THREAD_LATENCY_SUM.getTypeValueMap().get(operation).put(funcName, operationLatencySumThisClient.get(operation).get(funcName));
+          Metric.MIN_LATENCY.getTypeValueMap().get(operation).put(funcName, operationLatencyDigest.get(operation).get(funcName).quantile(0.0));
+          Metric.MAX_LATENCY.getTypeValueMap().get(operation).put(funcName, operationLatencyDigest.get(operation).get(funcName).quantile(1.0));
+          Metric.P10_LATENCY.getTypeValueMap().get(operation).put(funcName, operationLatencyDigest.get(operation).get(funcName).quantile(0.1));
+          Metric.P25_LATENCY.getTypeValueMap().get(operation).put(funcName, operationLatencyDigest.get(operation).get(funcName).quantile(0.25));
+          Metric.MEDIAN_LATENCY.getTypeValueMap().get(operation).put(funcName, operationLatencyDigest.get(operation).get(funcName).quantile(0.5));
+          Metric.P75_LATENCY.getTypeValueMap().get(operation).put(funcName, operationLatencyDigest.get(operation).get(funcName).quantile(0.75));
+          Metric.P90_LATENCY.getTypeValueMap().get(operation).put(funcName, operationLatencyDigest.get(operation).get(funcName).quantile(0.90));
+          Metric.P95_LATENCY.getTypeValueMap().get(operation).put(funcName, operationLatencyDigest.get(operation).get(funcName).quantile(0.95));
+          Metric.P99_LATENCY.getTypeValueMap().get(operation).put(funcName, operationLatencyDigest.get(operation).get(funcName).quantile(0.99));
+          Metric.P999_LATENCY.getTypeValueMap().get(operation).put(funcName, operationLatencyDigest.get(operation).get(funcName).quantile(0.999));
+        }
       }
     }
   }
@@ -166,33 +356,63 @@ public class Measurement {
     PersistenceFactory persistenceFactory = new PersistenceFactory();
     ITestDataPersistence recorder = persistenceFactory.getPersistence();
     System.out.println(Thread.currentThread().getName() + " measurements:");
-    System.out.println("Create schema cost " + String.format("%.2f", createSchemaTime) + " second");
-    System.out.println("Test elapsed time (not include schema creation): " + String.format("%.2f", elapseTime) + " second");
+    System.out.println("Create schema cost " + String.format("%.3f", createSchemaTime) + " second");
+    System.out.println("Test elapsed time (not include schema creation): " + String.format("%.3f", elapseTime) + " second");
     recorder.saveResult("total", TotalResult.CREATE_SCHEMA_TIME.getName(), "" + createSchemaTime);
     recorder.saveResult("total", TotalResult.ELAPSED_TIME.getName(), "" + elapseTime);
 
     System.out.println(
-            "----------------------------------------------------------Result Matrix----------------------------------------------------------");
+            "------------------------------------------------------------Result Matrix------------------------------------------------------------");
     StringBuilder format = new StringBuilder();
-    for (int i = 0; i < 6; i++) {
+    format.append(OPERATION_ITEM);
+    for (int i = 0; i < 5; i++) {
       format.append(RESULT_ITEM);
     }
     format.append("\n");
     System.out.printf(format.toString(), "Operation", "okOperation", "okPoint", "failOperation", "failPoint", "throughput(point/s)");
     for (Operation operation : Operation.values()) {
-      String throughput = String.format("%.2f", okPointNumMap.get(operation) / elapseTime);
-      System.out.printf(format.toString(), operation.getName(), okOperationNumMap.get(operation), okPointNumMap.get(operation),
-              failOperationNumMap.get(operation), failPointNumMap.get(operation), throughput);
-
-      recorder.saveResult(operation.toString(), TotalOperationResult.OK_OPERATION_NUM.getName(), "" + okOperationNumMap.get(operation));
-      recorder.saveResult(operation.toString(), TotalOperationResult.OK_POINT_NUM.getName(), "" + okPointNumMap.get(operation));
-      recorder.saveResult(operation.toString(), TotalOperationResult.FAIL_OPERATION_NUM.getName(), "" + failOperationNumMap.get(operation));
-      recorder.saveResult(operation.toString(), TotalOperationResult.FAIL_POINT_NUM.getName(), "" + failPointNumMap.get(operation));
-      recorder.saveResult(operation.toString(), TotalOperationResult.THROUGHPUT.getName(), throughput);
+      String throughput, operationTitle;
+      switch (operation) {
+        case INGESTION:
+        case RANGE_QUERY:
+          throughput = String.format("%.3f", okPointNumMap.get(operation).get("NONE") / elapseTime);
+          System.out.printf(format.toString(), operation.getName(), okOperationNumMap.get(operation).get("NONE"), okPointNumMap.get(operation).get("NONE"),
+                  failOperationNumMap.get(operation).get("NONE"), failPointNumMap.get(operation).get("NONE"), throughput);
+          recorder.saveResult(operation.toString(), TotalOperationResult.OK_OPERATION_NUM.getName(), "" + okOperationNumMap.get(operation).get("NONE"));
+          recorder.saveResult(operation.toString(), TotalOperationResult.OK_POINT_NUM.getName(), "" + okPointNumMap.get(operation).get("NONE"));
+          recorder.saveResult(operation.toString(), TotalOperationResult.FAIL_OPERATION_NUM.getName(), "" + failOperationNumMap.get(operation).get("NONE"));
+          recorder.saveResult(operation.toString(), TotalOperationResult.FAIL_POINT_NUM.getName(), "" + failPointNumMap.get(operation).get("NONE"));
+          recorder.saveResult(operation.toString(), TotalOperationResult.THROUGHPUT.getName(), throughput);
+          break;
+        case AGG_RANGE_QUERY:
+          String aggFuncName = config.QUERY_AGGREGATE_FUN;
+          operationTitle = operation.getName() + ": " + aggFuncName;
+          throughput = String.format("%.3f", okPointNumMap.get(operation).get(aggFuncName) / elapseTime);
+          System.out.printf(format.toString(), operationTitle, okOperationNumMap.get(operation).get(aggFuncName), okPointNumMap.get(operation).get(aggFuncName),
+                  failOperationNumMap.get(operation).get(aggFuncName), failPointNumMap.get(operation).get(aggFuncName), throughput);
+          recorder.saveResult(operationTitle, TotalOperationResult.OK_OPERATION_NUM.getName(), "" + okOperationNumMap.get(operation).get(aggFuncName));
+          recorder.saveResult(operationTitle, TotalOperationResult.OK_POINT_NUM.getName(), "" + okPointNumMap.get(operation).get(aggFuncName));
+          recorder.saveResult(operationTitle, TotalOperationResult.FAIL_OPERATION_NUM.getName(), "" + failOperationNumMap.get(operation).get(aggFuncName));
+          recorder.saveResult(operationTitle, TotalOperationResult.FAIL_POINT_NUM.getName(), "" + failPointNumMap.get(operation).get(aggFuncName));
+          recorder.saveResult(operationTitle, TotalOperationResult.THROUGHPUT.getName(), throughput);
+          break;
+        case RANGED_UDF_QUERY:
+          for (String udfName : config.QUERY_UDF_NAME_LIST) {
+            operationTitle = operation.getName() + ": " + udfName;
+            throughput = String.format("%.3f", okPointNumMap.get(operation).get(udfName) / elapseTime);
+            System.out.printf(format.toString(), operationTitle, okOperationNumMap.get(operation).get(udfName), okPointNumMap.get(operation).get(udfName),
+                    failOperationNumMap.get(operation).get(udfName), failPointNumMap.get(operation).get(udfName), throughput);
+            recorder.saveResult(operationTitle, TotalOperationResult.OK_OPERATION_NUM.getName(), "" + okOperationNumMap.get(operation).get(udfName));
+            recorder.saveResult(operationTitle, TotalOperationResult.OK_POINT_NUM.getName(), "" + okPointNumMap.get(operation).get(udfName));
+            recorder.saveResult(operationTitle, TotalOperationResult.FAIL_OPERATION_NUM.getName(), "" + failOperationNumMap.get(operation).get(udfName));
+            recorder.saveResult(operationTitle, TotalOperationResult.FAIL_POINT_NUM.getName(), "" + failPointNumMap.get(operation).get(udfName));
+            recorder.saveResult(operationTitle, TotalOperationResult.THROUGHPUT.getName(), throughput);
+          }
+          break;
+      }
     }
     System.out.println(
-            "---------------------------------------------------------------------------------------------------------------------------------");
-
+            "-------------------------------------------------------------------------------------------------------------------------------------");
     recorder.close();
   }
 
@@ -226,23 +446,52 @@ public class Measurement {
     PersistenceFactory persistenceFactory = new PersistenceFactory();
     ITestDataPersistence recorder = persistenceFactory.getPersistence();
     System.out.println(
-            "--------------------------------------------------------------------------Latency (ms) Matrix--------------------------------------------------------------------------");
-    System.out.printf(RESULT_ITEM, "Operation");
+            "---------------------------------------------------------------------------Latency (ms) Matrix---------------------------------------------------------------------------");
+    System.out.printf(OPERATION_ITEM, "Operation");
     for (Metric metric : Metric.values()) {
       System.out.printf(LATENCY_ITEM, metric.name);
     }
     System.out.println();
     for (Operation operation : Operation.values()) {
-      System.out.printf(RESULT_ITEM, operation.getName());
-      for (Metric metric : Metric.values()) {
-        String metricResult = String.format("%.2f", metric.typeValueMap.get(operation));
-        System.out.printf(LATENCY_ITEM, metricResult);
-        recorder.saveResult(operation.toString(), metric.name, metricResult);
+      String operationTitle;
+      switch (operation) {
+        case INGESTION:
+        case RANGE_QUERY:
+          System.out.printf(OPERATION_ITEM, operation.getName());
+          for (Metric metric : Metric.values()) {
+            String metricResult = String.format("%.3f", metric.typeValueMap.get(operation).get("NONE"));
+            System.out.printf(LATENCY_ITEM, metricResult);
+            recorder.saveResult(operation.toString(), metric.name, metricResult);
+          }
+          System.out.println();
+          break;
+        case AGG_RANGE_QUERY:
+          String aggFuncName = config.QUERY_AGGREGATE_FUN;
+          operationTitle = operation.getName() + ": " + aggFuncName;
+          System.out.printf(OPERATION_ITEM, operationTitle);
+          for (Metric metric : Metric.values()) {
+            String metricResult = String.format("%.3f", metric.typeValueMap.get(operation).get(aggFuncName));
+            System.out.printf(LATENCY_ITEM, metricResult);
+            recorder.saveResult(operation.toString(), metric.name, metricResult);
+          }
+          System.out.println();
+          break;
+        case RANGED_UDF_QUERY:
+          for (String udfName : config.QUERY_UDF_NAME_LIST) {
+            operationTitle = operation.getName() + ": " + udfName;
+            System.out.printf(OPERATION_ITEM, operationTitle);
+            for (Metric metric : Metric.values()) {
+              String metricResult = String.format("%.3f", metric.typeValueMap.get(operation).get(udfName));
+              System.out.printf(LATENCY_ITEM, metricResult);
+              recorder.saveResult(operation.toString(), metric.name, metricResult);
+            }
+            System.out.println();
+          }
+          break;
       }
-      System.out.println();
     }
     System.out.println(
-            "-----------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+            "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
     recorder.close();
   }
 
@@ -357,10 +606,33 @@ public class Measurement {
       bw.write("Operation" + "," + "okOperation" + "," + "okPoint" + "," + "failOperation"
               + "," + "failPoint" + "," + "throughput(point/s)");
       for (Operation operation : Operation.values()) {
-        String throughput = String.format("%.2f", okPointNumMap.get(operation) / elapseTime);
-        bw.newLine();
-        bw.write(operation.getName() + "," + okOperationNumMap.get(operation) + "," + okPointNumMap.get(operation)
-                + "," + failOperationNumMap.get(operation) + "," + failPointNumMap.get(operation) + "," + throughput);
+        String throughput, operationTitle;
+        switch (operation) {
+          case INGESTION:
+          case RANGE_QUERY:
+            throughput = String.format("%.3f", okPointNumMap.get(operation).get("NONE") / elapseTime);
+            bw.newLine();
+            bw.write(operation.getName() + "," + okOperationNumMap.get(operation).get("NONE") + "," + okPointNumMap.get(operation).get("NONE")
+                    + "," + failOperationNumMap.get(operation).get("NONE") + "," + failPointNumMap.get(operation).get("NONE") + "," + throughput);
+            break;
+          case AGG_RANGE_QUERY:
+            String aggFuncName = config.QUERY_AGGREGATE_FUN;
+            operationTitle = operation.getName() + ": " + aggFuncName;
+            throughput = String.format("%.3f", okPointNumMap.get(operation).get(aggFuncName) / elapseTime);
+            bw.newLine();
+            bw.write(operationTitle + "," + okOperationNumMap.get(operation).get(aggFuncName) + "," + okPointNumMap.get(operation).get(aggFuncName)
+                    + "," + failOperationNumMap.get(operation).get(aggFuncName) + "," + failPointNumMap.get(operation).get(aggFuncName) + "," + throughput);
+            break;
+          case RANGED_UDF_QUERY:
+            for (String udfName : config.QUERY_UDF_NAME_LIST) {
+              operationTitle = operation.getName() + ": " + udfName;
+              throughput = String.format("%.3f", okPointNumMap.get(operation).get(udfName) / elapseTime);
+              bw.newLine();
+              bw.write(operationTitle + "," + okOperationNumMap.get(operation).get(udfName) + "," + okPointNumMap.get(operation).get(udfName)
+                      + "," + failOperationNumMap.get(operation).get(udfName) + "," + failPointNumMap.get(operation).get(udfName) + "," + throughput);
+            }
+            break;
+        }
       }
       bw.close();
     } catch (IOException e) {
@@ -380,12 +652,39 @@ public class Measurement {
       }
       bw.newLine();
       for (Operation operation : Operation.values()) {
-        bw.write(operation.getName());
-        for (Metric metric : Metric.values()) {
-          String metricResult = String.format("%.2f", metric.typeValueMap.get(operation));
-          bw.write("," + metricResult);
+        String throughput, operationTitle;
+        switch (operation) {
+          case INGESTION:
+          case RANGE_QUERY:
+            bw.write(operation.getName());
+            for (Metric metric : Metric.values()) {
+              String metricResult = String.format("%.3f", metric.typeValueMap.get(operation).get("NONE"));
+              bw.write("," + metricResult);
+            }
+            bw.newLine();
+            break;
+          case AGG_RANGE_QUERY:
+            String aggFuncName = config.QUERY_AGGREGATE_FUN;
+            operationTitle = operation.getName() + ": " + aggFuncName;
+            bw.write(operationTitle);
+            for (Metric metric : Metric.values()) {
+              String metricResult = String.format("%.3f", metric.typeValueMap.get(operation).get(aggFuncName));
+              bw.write("," + metricResult);
+            }
+            bw.newLine();
+            break;
+          case RANGED_UDF_QUERY:
+            for (String udfName : config.QUERY_UDF_NAME_LIST) {
+              operationTitle = operation.getName() + ": " + udfName;
+              bw.write(operationTitle);
+              for (Metric metric : Metric.values()) {
+                String metricResult = String.format("%.3f", metric.typeValueMap.get(operation).get(udfName));
+                bw.write("," + metricResult);
+              }
+              bw.newLine();
+            }
+            break;
         }
-        bw.newLine();
       }
       bw.close();
     } catch (IOException e) {

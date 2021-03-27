@@ -42,7 +42,7 @@ public class OperationController {
       case 2:
         return Operation.AGG_RANGE_QUERY;
       case 3:
-        return Operation.RANGED_UDF_QUERY;
+        return Operation.UDF_RANGE_QUERY;
       default:
         LOGGER.error("Unsupported operation {}, use default operation: INGESTION.", i);
         return Operation.INGESTION;

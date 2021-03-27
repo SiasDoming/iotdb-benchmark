@@ -14,7 +14,7 @@ import cn.edu.tsinghua.iotdb.benchmark.tsdb.iotdb.IoTDBSession;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Batch;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.UDFRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 
 import org.slf4j.Logger;
@@ -143,12 +143,12 @@ public class DBWrapper implements IDatabase {
   }
 
   @Override
-  public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
+  public Status udfRangeQuery(UDFRangeQuery udfRangeQuery) {
     Status status = null;
-    Operation operation = Operation.RANGED_UDF_QUERY;
+    Operation operation = Operation.UDF_RANGE_QUERY;
     try {
       long st = System.nanoTime();
-      status = db.rangedUDFQuery(rangedUDFQuery);
+      status = db.udfRangeQuery(udfRangeQuery);
       long en = System.nanoTime();
       status.setTimeCost(en - st);
       handleQueryOperation(status, operation);

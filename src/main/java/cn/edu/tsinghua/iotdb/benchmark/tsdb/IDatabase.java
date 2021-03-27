@@ -5,7 +5,7 @@ import cn.edu.tsinghua.iotdb.benchmark.measurement.Status;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Batch;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.UDFRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 
 import java.util.List;
@@ -64,8 +64,8 @@ public interface IDatabase {
   /**
    * UDF query of one or multiple sensors within a time range.
    * e.g. select udf(v1)... from data where device in ? and time >= ? and time <= ?
-   * @param rangedUDFQuery contains universal UDF query with time filters parameters
+   * @param udfRangeQuery contains universal UDF query with time filters parameters
    * @return status which contains successfully executed flag, error message and so on.
    */
-  Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery);
+  Status udfRangeQuery(UDFRangeQuery udfRangeQuery);
 }

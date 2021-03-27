@@ -3,7 +3,7 @@ package cn.edu.tsinghua.iotdb.benchmark.workload;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Batch;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.UDFRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 
 public interface IWorkload {
@@ -14,5 +14,5 @@ public interface IWorkload {
 
   AggRangeQuery getAggRangeQuery() throws WorkloadException;
 
-  RangedUDFQuery getRangedUDFQuery() throws WorkloadException;
+  UDFRangeQuery getUDFRangeQuery() throws WorkloadException;
 }

@@ -4,7 +4,7 @@ public enum Operation {
   INGESTION("INGESTION"),
   RANGE_QUERY("TIME_RANGE"),
   AGG_RANGE_QUERY("AGG_RANGE"),
-  RANGED_UDF_QUERY("RANGED_UDF");
+  UDF_RANGE_QUERY("UDF_RANGE");
 
   public String getName() {
     return name;

@@ -4,7 +4,7 @@ import cn.edu.tsinghua.iotdb.benchmark.conf.Config;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Batch;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.UDFRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.BasicReader;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.GeolifeReader;
 import cn.edu.tsinghua.iotdb.benchmark.workload.reader.ReddReader;
@@ -98,9 +98,9 @@ public class RealDatasetWorkLoad implements IWorkload {
   }
 
   @Override
-  public RangedUDFQuery getRangedUDFQuery() {
+  public UDFRangeQuery getUDFRangeQuery() {
     int currentUDFLoop = config.getAndIncrementQueryUDFLoop();
-    return new RangedUDFQuery(deviceSchemaList, startTime, endTime, config.QUERY_UDF_NAME_LIST.get(currentUDFLoop), config.QUERY_UDF_FULL_CLASS_NAME.get(currentUDFLoop));
+    return new UDFRangeQuery(deviceSchemaList, startTime, endTime, config.QUERY_UDF_NAME_LIST.get(currentUDFLoop), config.QUERY_UDF_FULL_CLASS_NAME.get(currentUDFLoop));
   }
 
   static String calGroupIdStr(String deviceId, int groupNum) {

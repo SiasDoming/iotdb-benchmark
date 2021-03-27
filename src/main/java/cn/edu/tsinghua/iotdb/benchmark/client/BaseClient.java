@@ -98,11 +98,11 @@ public abstract class BaseClient extends Client implements Runnable {
             LOGGER.error("Failed to do aggregation range query because ", e);
           }
           break;
-        case RANGED_UDF_QUERY:
+        case UDF_RANGE_QUERY:
           try {
             // to dos: 持续更新循环机制，保证与config文件修改一致
             for (int i = 0; i < config.QUERY_UDF_NAME_LIST.size(); i++) {
-              dbWrapper.rangedUDFQuery(syntheticWorkload.getRangedUDFQuery());
+              dbWrapper.udfRangeQuery(syntheticWorkload.getUDFRangeQuery());
             }
           } catch (WorkloadException e) {
             LOGGER.error("Fail to do ranged UDF query because ", e);

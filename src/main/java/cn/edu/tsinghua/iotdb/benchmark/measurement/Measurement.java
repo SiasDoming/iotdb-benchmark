@@ -59,7 +59,7 @@ public class Measurement {
           operationLatencyDigest.get(operation).put(config.QUERY_AGGREGATE_FUN, new TDigest(COMPRESSION));
           operationLatencySumAllClient.get(operation).put(config.QUERY_AGGREGATE_FUN, 0D);
           break;
-        case RANGED_UDF_QUERY:
+        case UDF_RANGE_QUERY:
           for (String udfName : config.QUERY_UDF_NAME_LIST) {
             operationLatencyDigest.get(operation).put(udfName, new TDigest(COMPRESSION));
             operationLatencySumAllClient.get(operation).put(udfName, 0D);
@@ -97,7 +97,7 @@ public class Measurement {
           failPointNumMap.get(operation).put(config.QUERY_AGGREGATE_FUN, 0L);
           operationLatencySumThisClient.get(operation).put(config.QUERY_AGGREGATE_FUN, 0D);
           break;
-        case RANGED_UDF_QUERY:
+        case UDF_RANGE_QUERY:
           for (String udfName : config.QUERY_UDF_NAME_LIST) {
             okOperationNumMap.get(operation).put(udfName, 0L);
             failOperationNumMap.get(operation).put(udfName, 0L);
@@ -120,7 +120,7 @@ public class Measurement {
       case RANGE_QUERY:
         return getOkOperationNum(operation, "NONE");
       case AGG_RANGE_QUERY:
-      case RANGED_UDF_QUERY:
+      case UDF_RANGE_QUERY:
         long sum = 0L;
         for (Long value : okOperationNumMap.get(operation).values()) {
           sum += value;
@@ -141,7 +141,7 @@ public class Measurement {
       case RANGE_QUERY:
         return getFailOperationNum(operation, "NONE");
       case AGG_RANGE_QUERY:
-      case RANGED_UDF_QUERY:
+      case UDF_RANGE_QUERY:
         long sum = 0L;
         for (Long value : failOperationNumMap.get(operation).values()) {
           sum += value;
@@ -162,7 +162,7 @@ public class Measurement {
       case RANGE_QUERY:
         return getOkPointNum(operation, "NONE");
       case AGG_RANGE_QUERY:
-      case RANGED_UDF_QUERY:
+      case UDF_RANGE_QUERY:
         long sum = 0L;
         for (Long value : okPointNumMap.get(operation).values()) {
           sum += value;
@@ -183,7 +183,7 @@ public class Measurement {
       case RANGE_QUERY:
         return getFailPointNum(operation, "NONE");
       case AGG_RANGE_QUERY:
-      case RANGED_UDF_QUERY:
+      case UDF_RANGE_QUERY:
         long sum = 0L;
         for (Long value : failPointNumMap.get(operation).values()) {
           sum += value;
@@ -205,7 +205,7 @@ public class Measurement {
         addOperationLatency(operation, "NONE", latency);
         break;
       case AGG_RANGE_QUERY:
-      case RANGED_UDF_QUERY:
+      case UDF_RANGE_QUERY:
       default:
         LOGGER.debug("Unspecified operation while recording {} latency", operation.getName());
         break;
@@ -226,7 +226,7 @@ public class Measurement {
         addOkPointNum(operation, "NONE", pointNum);
         break;
       case AGG_RANGE_QUERY:
-      case RANGED_UDF_QUERY:
+      case UDF_RANGE_QUERY:
       default:
         LOGGER.debug("Unspecified operation while recording {} ok point number", operation.getName());
         break;
@@ -244,7 +244,7 @@ public class Measurement {
         addFailPointNum(operation, "NONE", pointNum);
         break;
       case AGG_RANGE_QUERY:
-      case RANGED_UDF_QUERY:
+      case UDF_RANGE_QUERY:
       default:
         LOGGER.debug("Unspecified operation while recording {} fail point number", operation.getName());
         break;
@@ -262,7 +262,7 @@ public class Measurement {
         addOkOperationNum(operation, "NONE");
         break;
       case AGG_RANGE_QUERY:
-      case RANGED_UDF_QUERY:
+      case UDF_RANGE_QUERY:
       default:
         LOGGER.debug("Unspecified operation while recording {} ok operation number", operation.getName());
         break;
@@ -280,7 +280,7 @@ public class Measurement {
         addFailOperationNum(operation, "NONE");
         break;
       case AGG_RANGE_QUERY:
-      case RANGED_UDF_QUERY:
+      case UDF_RANGE_QUERY:
       default:
         LOGGER.debug("Unspecified operation while recording {} fail operation number", operation.getName());
         break;
@@ -396,7 +396,7 @@ public class Measurement {
           recorder.saveResult(operationTitle, TotalOperationResult.FAIL_POINT_NUM.getName(), "" + failPointNumMap.get(operation).get(aggFuncName));
           recorder.saveResult(operationTitle, TotalOperationResult.THROUGHPUT.getName(), throughput);
           break;
-        case RANGED_UDF_QUERY:
+        case UDF_RANGE_QUERY:
           for (String udfName : config.QUERY_UDF_NAME_LIST) {
             operationTitle = operation.getName() + ": " + udfName;
             throughput = String.format("%.3f", okPointNumMap.get(operation).get(udfName) / elapseTime);
@@ -476,7 +476,7 @@ public class Measurement {
           }
           System.out.println();
           break;
-        case RANGED_UDF_QUERY:
+        case UDF_RANGE_QUERY:
           for (String udfName : config.QUERY_UDF_NAME_LIST) {
             operationTitle = operation.getName() + ": " + udfName;
             System.out.printf(OPERATION_ITEM, operationTitle);
@@ -623,7 +623,7 @@ public class Measurement {
             bw.write(operationTitle + "," + okOperationNumMap.get(operation).get(aggFuncName) + "," + okPointNumMap.get(operation).get(aggFuncName)
                     + "," + failOperationNumMap.get(operation).get(aggFuncName) + "," + failPointNumMap.get(operation).get(aggFuncName) + "," + throughput);
             break;
-          case RANGED_UDF_QUERY:
+          case UDF_RANGE_QUERY:
             for (String udfName : config.QUERY_UDF_NAME_LIST) {
               operationTitle = operation.getName() + ": " + udfName;
               throughput = String.format("%.3f", okPointNumMap.get(operation).get(udfName) / elapseTime);
@@ -673,7 +673,7 @@ public class Measurement {
             }
             bw.newLine();
             break;
-          case RANGED_UDF_QUERY:
+          case UDF_RANGE_QUERY:
             for (String udfName : config.QUERY_UDF_NAME_LIST) {
               operationTitle = operation.getName() + ": " + udfName;
               bw.write(operationTitle);

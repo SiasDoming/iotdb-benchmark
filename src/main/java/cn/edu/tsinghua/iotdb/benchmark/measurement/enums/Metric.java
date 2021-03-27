@@ -48,7 +48,7 @@ public enum Metric {
         case AGG_RANGE_QUERY:
           typeValueMap.get(operation).put(config.QUERY_AGGREGATE_FUN, 0D);
           break;
-        case RANGED_UDF_QUERY:
+        case UDF_RANGE_QUERY:
           for (String funcName : config.QUERY_UDF_NAME_LIST) {
             typeValueMap.get(operation).put(funcName, 0D);
           }

@@ -11,7 +11,7 @@ import cn.edu.tsinghua.iotdb.benchmark.function.FunctionParam;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Batch;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.UDFRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DataSchema;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 
@@ -284,13 +284,13 @@ public class SyntheticWorkload implements IWorkload {
   }
 
   @Override
-  public RangedUDFQuery getRangedUDFQuery() throws WorkloadException{
+  public UDFRangeQuery getUDFRangeQuery() throws WorkloadException{
     // to dos: 更新RangedUDFQuery构造输入参数，支持复杂参数读取和输入
     List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
-    long startTimestamp = getQueryStartTimestamp(Operation.RANGED_UDF_QUERY);
+    long startTimestamp = getQueryStartTimestamp(Operation.UDF_RANGE_QUERY);
     long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
     int currentUDFLoop = config.getAndIncrementQueryUDFLoop();
-    return new RangedUDFQuery(queryDevices, startTimestamp, endTimestamp, config.QUERY_UDF_NAME_LIST.get(currentUDFLoop), config.QUERY_UDF_FULL_CLASS_NAME.get(currentUDFLoop));
+    return new UDFRangeQuery(queryDevices, startTimestamp, endTimestamp, config.QUERY_UDF_NAME_LIST.get(currentUDFLoop), config.QUERY_UDF_FULL_CLASS_NAME.get(currentUDFLoop));
   }
 
   private static long getTimestampConst(String timePrecision) {

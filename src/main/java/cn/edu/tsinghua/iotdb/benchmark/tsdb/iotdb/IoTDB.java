@@ -11,7 +11,7 @@ import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Batch;
 import cn.edu.tsinghua.iotdb.benchmark.workload.ingestion.Record;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.AggRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangeQuery;
-import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.RangedUDFQuery;
+import cn.edu.tsinghua.iotdb.benchmark.workload.query.impl.UDFRangeQuery;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 
 import org.apache.iotdb.session.Session;
@@ -225,7 +225,7 @@ public class IoTDB implements IDatabase {
    * 2010-01-01 12:30:00
    */
   @Override
-  public Status rangedUDFQuery(RangedUDFQuery rangedUDFQuery) {
+  public Status udfRangeQuery(UDFRangeQuery udfRangeQuery) {
     if (!IS_UDF_REGISTRATED) {
       try {
         registerUDF();
@@ -234,10 +234,10 @@ public class IoTDB implements IDatabase {
       }
     }
     // to dos: 更新sql语句，支持按说明输入参数，支持多输入，支持输入按照数据类型筛选
-    String rangedUDFQuerySqlHead = getRangedUDFQuerySqlHead(rangedUDFQuery.getDeviceSchema(),
-            rangedUDFQuery.getUdfName());
-    String sql = addWhereTimeClause(rangedUDFQuerySqlHead, rangedUDFQuery.getStartTimestamp(),
-            rangedUDFQuery.getEndTimestamp());
+    String rangedUDFQuerySqlHead = getRangedUDFQuerySqlHead(udfRangeQuery.getDeviceSchema(),
+            udfRangeQuery.getUdfName());
+    String sql = addWhereTimeClause(rangedUDFQuerySqlHead, udfRangeQuery.getStartTimestamp(),
+            udfRangeQuery.getEndTimestamp());
     return executeQueryAndGetStatus(sql);
   }
 

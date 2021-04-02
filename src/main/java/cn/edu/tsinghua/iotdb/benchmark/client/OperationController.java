@@ -66,4 +66,8 @@ public class OperationController {
     return proportion;
   }
 
+  boolean isNewOperationLoop() {
+    return operationIndex==0;
+  }
+
 }

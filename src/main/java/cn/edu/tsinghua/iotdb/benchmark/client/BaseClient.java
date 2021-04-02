@@ -53,75 +53,75 @@ public abstract class BaseClient extends Client implements Runnable {
     }, 1, config.LOG_PRINT_INTERVAL, TimeUnit.SECONDS);
     long start = 0;
     for (loopIndex = 0; loopIndex < config.LOOP; loopIndex++) {
-      //According to the probabilities (proportion) of operations.
-      Operation operation = operationController.getNextOperationType();
-      if (config.OP_INTERVAL > 0) {
-        start = System.currentTimeMillis();
-      }
-      switch (operation) {
-        case INGESTION:
-          if (config.IS_CLIENT_BIND) {
-            try {
-              List<DeviceSchema> schemas = dataSchema.getClientBindSchema().get(clientThreadId);
-              for (DeviceSchema deviceSchema : schemas) {
-                if (deviceSchema.getDeviceId() < actualDeviceFloor) {
-                  Batch batch = syntheticWorkload.getOneBatch(deviceSchema, insertLoopIndex);
+      do {
+        Operation operation = operationController.getNextOperationType();
+        if (config.OP_INTERVAL > 0) {
+          start = System.currentTimeMillis();
+        }
+        switch (operation) {
+          case INGESTION:
+            if (config.IS_CLIENT_BIND) {
+              try {
+                List<DeviceSchema> schemas = dataSchema.getClientBindSchema().get(clientThreadId);
+                for (DeviceSchema deviceSchema : schemas) {
+                  if (deviceSchema.getDeviceId() < actualDeviceFloor) {
+                    Batch batch = syntheticWorkload.getOneBatch(deviceSchema, insertLoopIndex);
+                    dbWrapper.insertOneBatch(batch);
+                  }
+                }
+              } catch (Exception e) {
+                LOGGER.error("Failed to insert one batch data because ", e);
+              }
+              insertLoopIndex++;
+            } else {
+              try {
+                Batch batch = singletonWorkload.getOneBatch();
+                if (batch.getDeviceSchema().getDeviceId() < actualDeviceFloor) {
                   dbWrapper.insertOneBatch(batch);
                 }
+              } catch (Exception e) {
+                LOGGER.error("Failed to insert one batch data because ", e);
               }
-            } catch (Exception e) {
-              LOGGER.error("Failed to insert one batch data because ", e);
             }
-            insertLoopIndex++;
-          } else {
+            break;
+          case RANGE_QUERY:
             try {
-              Batch batch = singletonWorkload.getOneBatch();
-              if (batch.getDeviceSchema().getDeviceId() < actualDeviceFloor) {
-                dbWrapper.insertOneBatch(batch);
-              }
+              dbWrapper.rangeQuery(syntheticWorkload.getRangeQuery());
             } catch (Exception e) {
-              LOGGER.error("Failed to insert one batch data because ", e);
+              LOGGER.error("Failed to do range query because ", e);
             }
-          }
-          break;
-        case RANGE_QUERY:
-          try {
-            dbWrapper.rangeQuery(syntheticWorkload.getRangeQuery());
-          } catch (Exception e) {
-            LOGGER.error("Failed to do range query because ", e);
-          }
-          break;
-        case AGG_RANGE_QUERY:
-          try {
-            dbWrapper.aggRangeQuery(syntheticWorkload.getAggRangeQuery());
-          } catch (WorkloadException e) {
-            LOGGER.error("Failed to do aggregation range query because ", e);
-          }
-          break;
-        case UDF_RANGE_QUERY:
-          try {
-            // to dos: 持续更新循环机制，保证与config文件修改一致
-            for (int i = 0; i < config.QUERY_UDF_NAME_LIST.size(); i++) {
-              dbWrapper.udfRangeQuery(syntheticWorkload.getUDFRangeQuery());
+            break;
+          case AGG_RANGE_QUERY:
+            try {
+              dbWrapper.aggRangeQuery(syntheticWorkload.getAggRangeQuery());
+            } catch (WorkloadException e) {
+              LOGGER.error("Failed to do aggregation range query because ", e);
             }
-          } catch (WorkloadException e) {
-            LOGGER.error("Fail to do ranged UDF query because ", e);
-          }
-          break;
-        default:
-          LOGGER.error("Unsupported operation type {}", operation);
-      }
-      if (config.OP_INTERVAL > 0) {
-        long elapsed = System.currentTimeMillis() - start;
-        if (elapsed < config.OP_INTERVAL) {
-          try {
-            Thread.sleep(config.OP_INTERVAL - elapsed);
-          } catch (InterruptedException e) {
-            LOGGER.error("Wait for next operation failed because ", e);
+            break;
+          case UDF_RANGE_QUERY:
+            try {
+              // to dos: 持续更新循环机制，保证与config文件修改一致
+              for (int i = 0; i < config.QUERY_UDF_NAME_LIST.size(); i++) {
+                dbWrapper.udfRangeQuery(syntheticWorkload.getUDFRangeQuery());
+              }
+            } catch (WorkloadException e) {
+              LOGGER.error("Fail to do ranged UDF query because ", e);
+            }
+            break;
+          default:
+            LOGGER.error("Unsupported operation type {}", operation);
+        }
+        if (config.OP_INTERVAL > 0) {
+          long elapsed = System.currentTimeMillis() - start;
+          if (elapsed < config.OP_INTERVAL) {
+            try {
+              Thread.sleep(config.OP_INTERVAL - elapsed);
+            } catch (InterruptedException e) {
+              LOGGER.error("Wait for next operation failed because ", e);
+            }
           }
         }
-      }
-
+      } while (!operationController.isNewOperationLoop());
     }
     service.shutdown();
   }

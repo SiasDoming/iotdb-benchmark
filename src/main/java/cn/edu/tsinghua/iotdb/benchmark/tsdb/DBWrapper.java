@@ -135,7 +135,7 @@ public class DBWrapper implements IDatabase {
       status = db.aggRangeQuery(aggRangeQuery);
       long en = System.nanoTime();
       status.setTimeCost(en - st);
-      handleQueryOperation(status, operation);
+      handleQueryOperation(status, operation, aggRangeQuery.getAggFun());
     } catch (Exception e) {
       handleUnexpectedQueryException(operation, e);
     }
@@ -151,7 +151,7 @@ public class DBWrapper implements IDatabase {
       status = db.udfRangeQuery(udfRangeQuery);
       long en = System.nanoTime();
       status.setTimeCost(en - st);
-      handleQueryOperation(status, operation);
+      handleQueryOperation(status, operation, udfRangeQuery.getUdfName());
     } catch (Exception e) {
       handleUnexpectedQueryException(operation, e);
     }
@@ -198,6 +198,19 @@ public class DBWrapper implements IDatabase {
     recorder.saveOperationResult(operation.getName(), okPointNum, 0, latencyInMillis, "");
   }
 
+  private void measureOkOperation(Status status, Operation operation, String funcName, int okPointNum) {
+    double latencyInMillis = status.getTimeCost() / NANO_TO_MILLIS;
+    if(latencyInMillis < 0) {
+      LOGGER.warn("Operation {} may have exception since the latency is negative, set it to zero",
+              operation.getName());
+      latencyInMillis = 0;
+    }
+    measurement.addOperationLatency(operation, funcName,latencyInMillis);
+    measurement.addOkOperationNum(operation, funcName);
+    measurement.addOkPointNum(operation, funcName, okPointNum);
+    recorder.saveOperationResult(operation.getName(), okPointNum, 0, latencyInMillis, "");
+  }
+
   private void handleQueryOperation(Status status, Operation operation) {
     if (status.isOk()) {
       measureOkOperation(status, operation, status.getQueryResultPointNum());
@@ -215,6 +228,26 @@ public class DBWrapper implements IDatabase {
       // currently we do not have expected result point number for query
       recorder
           .saveOperationResult(operation.getName(), 0, 0, 0, status.getException().toString());
+    }
+  }
+
+  private void handleQueryOperation(Status status, Operation operation, String funcName) {
+    if (status.isOk()) {
+      measureOkOperation(status, operation, funcName, status.getQueryResultPointNum());
+      if(!config.IS_QUIET_MODE) {
+        double timeInMillis = status.getTimeCost() / NANO_TO_MILLIS;
+        String formatTimeInMillis = String.format("%.2f", timeInMillis);
+        String currentThread = Thread.currentThread().getName();
+        LOGGER
+                .info("{} complete {} with latency ,{}, ms ,{}, result points", currentThread, operation,
+                        formatTimeInMillis, status.getQueryResultPointNum());
+      }
+    } else {
+      LOGGER.error("Execution fail: {}", status.getErrorMessage(), status.getException());
+      measurement.addFailOperationNum(operation, funcName);
+      // currently we do not have expected result point number for query
+      recorder
+              .saveOperationResult(operation.getName(), 0, 0, 0, status.getException().toString());
     }
   }
 

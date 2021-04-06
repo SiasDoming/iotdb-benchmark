@@ -42,7 +42,7 @@ public class IoTDB implements IDatabase {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(IoTDB.class);
   private static final String ALREADY_KEYWORD = "already exist";
-  private static final String ALREADY_REGISTRATED_KEYWORTD = "already been registered";
+  private static final String ALREADY_REGISTERED_KEYWORD = "already been registered";
   private static boolean IS_UDF_REGISTRATED = false;
   protected static Config config = ConfigDescriptor.getInstance().getConfig();
 
@@ -380,9 +380,10 @@ public class IoTDB implements IDatabase {
       IS_UDF_REGISTRATED = true;
     } catch (Exception e) {
       // ignore if given udf is already registrated
-      if (!e.getMessage().contains(ALREADY_REGISTRATED_KEYWORTD)) {
-        LOGGER.error("Register IoTDB UDF failed because ", e);
+      if (e.getMessage().contains(ALREADY_REGISTERED_KEYWORD)) {
         IS_UDF_REGISTRATED = true;
+      } else {
+        LOGGER.error("Register IoTDB UDF failed because ", e);
         throw new TsdbException(e);
       }
     }

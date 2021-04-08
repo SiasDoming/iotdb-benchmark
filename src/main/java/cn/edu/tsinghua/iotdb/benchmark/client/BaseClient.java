@@ -100,8 +100,7 @@ public abstract class BaseClient extends Client implements Runnable {
             break;
           case UDF_RANGE_QUERY:
             try {
-              // to dos: 持续更新循环机制，保证与config文件修改一致
-              for (int i = 0; i < config.QUERY_UDF_NAME_LIST.size(); i++) {
+              for (int i = 0; i < config.QUERY_UDF_INFO_LIST.size(); i++) {
                 dbWrapper.udfRangeQuery(syntheticWorkload.getUDFRangeQuery());
               }
             } catch (WorkloadException e) {

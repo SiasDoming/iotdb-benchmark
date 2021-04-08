@@ -3,6 +3,7 @@ package cn.edu.tsinghua.iotdb.benchmark.measurement;
 import cn.edu.tsinghua.iotdb.benchmark.client.Operation;
 import cn.edu.tsinghua.iotdb.benchmark.conf.Config;
 import cn.edu.tsinghua.iotdb.benchmark.conf.ConfigDescriptor;
+import cn.edu.tsinghua.iotdb.benchmark.conf.UDFInformation;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.enums.Metric;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.enums.TotalOperationResult;
 import cn.edu.tsinghua.iotdb.benchmark.measurement.enums.TotalResult;
@@ -60,9 +61,9 @@ public class Measurement {
           operationLatencySumAllClient.get(operation).put(config.QUERY_AGGREGATE_FUN, 0D);
           break;
         case UDF_RANGE_QUERY:
-          for (String udfName : config.QUERY_UDF_NAME_LIST) {
-            operationLatencyDigest.get(operation).put(udfName, new TDigest(COMPRESSION));
-            operationLatencySumAllClient.get(operation).put(udfName, 0D);
+          for (UDFInformation udfInformation : config.QUERY_UDF_INFO_LIST) {
+            operationLatencyDigest.get(operation).put(udfInformation.getUdfName(), new TDigest(COMPRESSION));
+            operationLatencySumAllClient.get(operation).put(udfInformation.getUdfName(), 0D);
           }
           break;
       }
@@ -98,7 +99,8 @@ public class Measurement {
           operationLatencySumThisClient.get(operation).put(config.QUERY_AGGREGATE_FUN, 0D);
           break;
         case UDF_RANGE_QUERY:
-          for (String udfName : config.QUERY_UDF_NAME_LIST) {
+          for (UDFInformation udfInformation : config.QUERY_UDF_INFO_LIST) {
+            String udfName = udfInformation.getUdfName();
             okOperationNumMap.get(operation).put(udfName, 0L);
             failOperationNumMap.get(operation).put(udfName, 0L);
             okPointNumMap.get(operation).put(udfName, 0L);
@@ -332,7 +334,7 @@ public class Measurement {
   public void calculateMetrics() {
     for (Operation operation : Operation.values()) {
       for (String funcName : okOperationNumMap.get(operation).keySet()) {
-        double avgLatency = 0;
+        double avgLatency;
         if (okOperationNumMap.get(operation).get(funcName) != 0) {
           avgLatency = operationLatencySumAllClient.get(operation).get(funcName) / okOperationNumMap.get(operation).get(funcName);
           Metric.AVG_LATENCY.getTypeValueMap().get(operation).put(funcName, avgLatency);
@@ -397,7 +399,8 @@ public class Measurement {
           recorder.saveResult(operationTitle, TotalOperationResult.THROUGHPUT.getName(), throughput);
           break;
         case UDF_RANGE_QUERY:
-          for (String udfName : config.QUERY_UDF_NAME_LIST) {
+          for (UDFInformation udfInformation : config.QUERY_UDF_INFO_LIST) {
+            String udfName = udfInformation.getUdfName();
             operationTitle = operation.getName() + ": " + udfName;
             throughput = String.format("%.3f", okPointNumMap.get(operation).get(udfName) / elapseTime);
             System.out.printf(format.toString(), operationTitle, okOperationNumMap.get(operation).get(udfName), okPointNumMap.get(operation).get(udfName),
@@ -477,7 +480,8 @@ public class Measurement {
           System.out.println();
           break;
         case UDF_RANGE_QUERY:
-          for (String udfName : config.QUERY_UDF_NAME_LIST) {
+          for (UDFInformation udfInformation : config.QUERY_UDF_INFO_LIST) {
+            String udfName = udfInformation.getUdfName();
             operationTitle = operation.getName() + ": " + udfName;
             System.out.printf(OPERATION_ITEM, operationTitle);
             for (Metric metric : Metric.values()) {
@@ -624,7 +628,8 @@ public class Measurement {
                     + "," + failOperationNumMap.get(operation).get(aggFuncName) + "," + failPointNumMap.get(operation).get(aggFuncName) + "," + throughput);
             break;
           case UDF_RANGE_QUERY:
-            for (String udfName : config.QUERY_UDF_NAME_LIST) {
+            for (UDFInformation udfInformation : config.QUERY_UDF_INFO_LIST) {
+              String udfName = udfInformation.getUdfName();
               operationTitle = operation.getName() + ": " + udfName;
               throughput = String.format("%.3f", okPointNumMap.get(operation).get(udfName) / elapseTime);
               bw.newLine();
@@ -674,7 +679,8 @@ public class Measurement {
             bw.newLine();
             break;
           case UDF_RANGE_QUERY:
-            for (String udfName : config.QUERY_UDF_NAME_LIST) {
+            for (UDFInformation udfInformation : config.QUERY_UDF_INFO_LIST) {
+              String udfName = udfInformation.getUdfName();
               operationTitle = operation.getName() + ": " + udfName;
               bw.write(operationTitle);
               for (Metric metric : Metric.values()) {

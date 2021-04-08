@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,18 +34,18 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.HashSet;
 
 public class IoTDB implements IDatabase {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(IoTDB.class);
   private static final String ALREADY_KEYWORD = "already exist";
   private static final String ALREADY_REGISTERED_KEYWORD = "already been registered";
-  private static boolean IS_UDF_REGISTRATED = false;
+  private static final String QUERY_COMMON_DEVICE = "DEVICE";
+  private static final String QUERY_COMMON_GROUP = "GROUP";
+  private static final String QUERY_COMMON_ROOT = "ROOT";
+
   protected static Config config = ConfigDescriptor.getInstance().getConfig();
+  private static Map<String, Boolean> IS_UDF_REGISTERED = new HashMap<>();
 
   protected IoTDBConnection ioTDBConnection;
   protected ExecutorService service;
@@ -72,6 +73,10 @@ public class IoTDB implements IDatabase {
       cleanupSession.open(config.ENABLE_THRIFT_COMPRESSION);
       String cleanupSql = String.format("DELETE TIMESERIES root.%s*", config.GROUP_NAME_PREFIX);
       cleanupSession.executeNonQueryStatement(cleanupSql);
+      for (String udfName : IS_UDF_REGISTERED.keySet()) {
+        cleanupSql = String.format("DROP FUNCTION %s", udfName);
+        cleanupSession.executeNonQueryStatement(cleanupSql);
+      }
       cleanupSession.close();
     } catch (Exception e) {
       LOGGER.error("Clean up IoTDB data failed because ", e);
@@ -175,14 +180,13 @@ public class IoTDB implements IDatabase {
 
   // convert deviceSchema to the format: root.group_1.d_1
   private String getDevicePath(DeviceSchema deviceSchema) {
-    return Constants.ROOT_SERIES_NAME + "." + deviceSchema.getGroup() + "." + deviceSchema
-        .getDevice();
+    return Constants.ROOT_SERIES_NAME + "." + deviceSchema.getGroup() + "." + deviceSchema.getDevice();
   }
 
   // convert deviceSchema and sensor to the format: root.group_1.d_1.s_1
   private String getSensorPath(DeviceSchema deviceSchema, String sensor) {
-    return Constants.ROOT_SERIES_NAME + "." + deviceSchema.getGroup() + "." + deviceSchema
-        .getDevice() + "." + sensor;
+    return Constants.ROOT_SERIES_NAME + "." + deviceSchema.getGroup() + "."
+            + deviceSchema.getDevice() + "." + sensor;
   }
 
   @Override
@@ -200,81 +204,280 @@ public class IoTDB implements IDatabase {
     }
   }
 
+  private String getInsertOneBatchSql(DeviceSchema deviceSchema, long timestamp, List<Object> values) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("insert into ")
+            .append(Constants.ROOT_SERIES_NAME)
+            .append(".").append(deviceSchema.getGroup())
+            .append(".").append(deviceSchema.getDevice())
+            .append("(timestamp");
+    for (String sensor : deviceSchema.getSensors()) {
+      builder.append(",").append(sensor);
+    }
+    builder.append(") values(");
+    builder.append(timestamp);
+    int sensorIndex = 0;
+    for (Object value : values) {
+      switch (SyntheticWorkload.getNextDataType(sensorIndex)) {
+        case "BOOLEAN":
+        case "INT32":
+        case "INT64":
+        case "FLOAT":
+        case "DOUBLE":
+          builder.append(",").append(value);
+          break;
+        case "TEXT":
+          builder.append(",").append("'").append(value).append("'");
+          break;
+      }
+      sensorIndex++;
+    }
+    builder.append(")");
+    LOGGER.debug("getInsertOneBatchSql: {}", builder);
+    return builder.toString();
+  }
+
+  /**
+   * SELECT s_0 FROM root.group_0.d_1 WHERE time >= 2010-01-01 12:00:00 AND time <= 2010-01-01 12:30:00
+   */
   @Override
   public Status rangeQuery(RangeQuery rangeQuery) {
-    String sql = getRangeQuerySql(rangeQuery.getDeviceSchema(), rangeQuery.getStartTimestamp(),
-        rangeQuery.getEndTimestamp());
-    return executeQueryAndGetStatus(sql);
-  }
-
-  /**
-   * SELECT max_value(s_76) FROM root.group_3.d_31 WHERE time >= 2010-01-01 12:00:00 AND time <=
-   * 2010-01-01 12:30:00
-   */
-  @Override
-  public Status aggRangeQuery(AggRangeQuery aggRangeQuery) {
-    String aggQuerySqlHead = getAggQuerySqlHead(aggRangeQuery.getDeviceSchema(),
-        aggRangeQuery.getAggFun());
-    String sql = addWhereTimeClause(aggQuerySqlHead, aggRangeQuery.getStartTimestamp(),
-        aggRangeQuery.getEndTimestamp());
-    return executeQueryAndGetStatus(sql);
-  }
-
-  /**
-   * SELECT UDF_name(s_3) FROM root.group_2.d_29 WHERE time >= 2010-01-01 12:00:00 AND time <=
-   * 2010-01-01 12:30:00
-   */
-  @Override
-  public Status udfRangeQuery(UDFRangeQuery udfRangeQuery) {
-    if (!IS_UDF_REGISTRATED) {
-      try {
-        registerUDF();
-      } catch (Exception e) {
-        return new Status(false, e, "UDF registration failed");
-      }
-    }
-    // to dos: 更新sql语句，支持按说明输入参数，支持多输入，支持输入按照数据类型筛选
-    String rangedUDFQuerySqlHead = getRangedUDFQuerySqlHead(udfRangeQuery.getDeviceSchema(),
-            udfRangeQuery.getUdfName());
-    String sql = addWhereTimeClause(rangedUDFQuerySqlHead, udfRangeQuery.getStartTimestamp(),
-            udfRangeQuery.getEndTimestamp());
-    return executeQueryAndGetStatus(sql);
+    StringBuilder builder = getSimpleQuerySqlHead(rangeQuery.getDeviceSchema());
+    addFromClause(builder, rangeQuery.getDeviceSchema());
+    addWhereTimeClause(builder, rangeQuery.getStartTimestamp(), rangeQuery.getEndTimestamp());
+    return executeQueryAndGetStatus(builder.toString());
   }
 
   /**
    * generate simple query header.
    *
    * @param devices schema list of query devices
-   * @return Simple Query header. e.g. SELECT s_0, s_3 FROM root.group_0.d_1, root.group_1.d_2
+   * @return Simple Query header. e.g. SELECT s_0, s_3
    */
-  private String getSimpleQuerySqlHead(List<DeviceSchema> devices) {
-    StringBuilder builder = new StringBuilder();
-    builder.append("SELECT ");
-    List<String> querySensors = devices.get(0).getSensors();
-    builder.append(querySensors.get(0));
-    for (int i = 1; i < querySensors.size(); i++) {
-      builder.append(", ").append(querySensors.get(i));
+  private StringBuilder getSimpleQuerySqlHead(List<DeviceSchema> devices) {
+    StringBuilder sqlBuilder = new StringBuilder();
+    sqlBuilder.append("SELECT ");
+    String commonLevel = getCommonPrefixLevel(devices);
+    for (DeviceSchema device : devices) {
+      String groupName = device.getGroup();
+      String deviceName = device.getDevice();
+      for (String sensor : device.getSensors()) {
+        switch (commonLevel) {
+          case QUERY_COMMON_DEVICE:
+            sqlBuilder.append(sensor);
+            break;
+          case QUERY_COMMON_GROUP:
+            sqlBuilder.append(deviceName).append(".").append(sensor);
+            break;
+          case QUERY_COMMON_ROOT:
+            sqlBuilder.append(groupName).append(".").append(deviceName).append(".").append(sensor);
+            break;
+        }
+        sqlBuilder.append(", ");
+      }
+      // if all device schemas share common device and sensor, the SQL statement only need to specify sensors once
+      // e.g. select udfName(s_1), udfName(s_2) from root.group_0.d_0, root.group_1.d_1
+      // outputs udfName(root.group_0.d_0.s_1), udfName(root.group_0.d_0.s_2), udfName(root.group_1.d_1.s_1), udfName(root.group_1.d_1.s_2)
+      if (commonLevel.equals(QUERY_COMMON_DEVICE)) {
+        break;
+      }
     }
-    return addFromClause(devices, builder);
+    // remove the last redundant ", "
+    sqlBuilder.delete(sqlBuilder.length() - 2, sqlBuilder.length());
+    return sqlBuilder;
   }
 
-  private String getAggQuerySqlHead(List<DeviceSchema> devices, String aggFun) {
-    StringBuilder builder = new StringBuilder();
-    builder.append("SELECT ");
-    List<String> querySensors = devices.get(0).getSensors();
-    builder.append(aggFun).append("(").append(querySensors.get(0)).append(")");
-    for (int i = 1; i < querySensors.size(); i++) {
-      builder.append(", ").append(aggFun).append("(").append(querySensors.get(i)).append(")");
-    }
-    return addFromClause(devices, builder);
+  /**
+   * SELECT max_value(s_3) FROM root.group_2.d_1 WHERE time >= 2010-01-01 12:00:00 AND time <= 2010-01-01 12:30:00
+   */
+  @Override
+  public Status aggRangeQuery(AggRangeQuery aggRangeQuery) {
+    StringBuilder builder = getAggQuerySqlHead(aggRangeQuery.getDeviceSchema(), aggRangeQuery.getAggFun());
+    addFromClause(builder, aggRangeQuery.getDeviceSchema());
+    addWhereTimeClause(builder, aggRangeQuery.getStartTimestamp(), aggRangeQuery.getEndTimestamp());
+    return executeQueryAndGetStatus(builder.toString());
   }
 
-  private String addFromClause(List<DeviceSchema> devices, StringBuilder builder) {
-    builder.append(" FROM ").append(getDevicePath(devices.get(0)));
+  /**
+   * generate aggregation query header.
+   *
+   * @param devices schema list of query devices
+   * @param aggFun aggregation function name
+   * @return Aggregation Query header. e.g. SELECT aggFun(s_0), aggFun(s_3)
+   */
+  private StringBuilder getAggQuerySqlHead(List<DeviceSchema> devices, String aggFun) {
+    StringBuilder sqlBuilder = new StringBuilder();
+    sqlBuilder.append("SELECT ");
+    String commonLevel = getCommonPrefixLevel(devices);
+    for (DeviceSchema device : devices) {
+      String groupName = device.getGroup();
+      String deviceName = device.getDevice();
+      for (String sensor : device.getSensors()) {
+        sqlBuilder.append(aggFun).append("(");
+        switch (commonLevel) {
+          case QUERY_COMMON_DEVICE:
+            sqlBuilder.append(sensor);
+            break;
+          case QUERY_COMMON_GROUP:
+            sqlBuilder.append(deviceName).append(".").append(sensor);
+            break;
+          case QUERY_COMMON_ROOT:
+            sqlBuilder.append(groupName).append(".").append(deviceName).append(".").append(sensor);
+            break;
+        }
+        sqlBuilder.append("), ");
+      }
+      if (commonLevel.equals(QUERY_COMMON_DEVICE)) {
+        break;
+      }
+    }
+    // remove the last redundant ", "
+    sqlBuilder.delete(sqlBuilder.length() - 2, sqlBuilder.length());
+    return sqlBuilder;
+  }
+
+  /**
+   * SELECT udfName(s_3) FROM root.group_2.d_2 WHERE time >= 2010-01-01 12:00:00 AND time <= 2010-01-01 12:30:00
+   */
+  @Override
+  public Status udfRangeQuery(UDFRangeQuery udfRangeQuery) {
+    if (!IS_UDF_REGISTERED.getOrDefault(udfRangeQuery.getUdfName(), false)) {
+      try {
+        registerUDF(udfRangeQuery.getUdfName(), udfRangeQuery.getUdfFullClassName());
+      } catch (Exception e) {
+        return new Status(false, e, "UDF registration failed");
+      }
+    }
+    StringBuilder sqlBuilder = getRangedUDFQuerySqlHead(udfRangeQuery.getDeviceSchema(), udfRangeQuery);
+    addFromClause(sqlBuilder, udfRangeQuery.getDeviceSchema());
+    addWhereTimeClause(sqlBuilder, udfRangeQuery.getStartTimestamp(), udfRangeQuery.getEndTimestamp());
+    return executeQueryAndGetStatus(sqlBuilder.toString());
+  }
+
+  /**
+   * generate UDF query header.
+   *
+   * @param devices schema list of query devices
+   * @param udfRangeQuery UDF Query information
+   * @return UDF Query header. e.g. SELECT udfName(s_0, s_1), udfName(s_3, s_5)
+   */
+  private StringBuilder getRangedUDFQuerySqlHead(List<DeviceSchema> devices, UDFRangeQuery udfRangeQuery) {
+    StringBuilder sqlBuilder = new StringBuilder();
+    sqlBuilder.append("SELECT ");
+    String commonLevel = getCommonPrefixLevel(devices);
+    int timeSeriesCount = 0;
+    for (DeviceSchema device : devices) {
+      String groupName = device.getGroup();
+      String deviceName = device.getDevice();
+      for (String sensor : device.getSensors()) {
+        if (timeSeriesCount == 0) {
+          sqlBuilder.append(udfRangeQuery.getUdfName()).append("(");
+        }
+        switch (commonLevel) {
+          case QUERY_COMMON_DEVICE:
+            sqlBuilder.append(sensor);
+            break;
+          case QUERY_COMMON_GROUP:
+            sqlBuilder.append(deviceName).append(".").append(sensor);
+            break;
+          case QUERY_COMMON_ROOT:
+            sqlBuilder.append(groupName).append(".").append(deviceName).append(".").append(sensor);
+            break;
+        }
+        timeSeriesCount ++;
+        if (timeSeriesCount == udfRangeQuery.getTimeSeriesNumber()) {
+          for (Map.Entry<String, String> argument : udfRangeQuery.getArguments().entrySet()) {
+            sqlBuilder.append(", \"").append(argument.getKey()).append("\"=\"").append(argument.getValue()).append("\"");
+          }
+          sqlBuilder.append("), ");
+          timeSeriesCount = 0;
+        } else {
+          sqlBuilder.append(", ");
+        }
+      }
+      if (commonLevel.equals(QUERY_COMMON_DEVICE)) {
+        break;
+      }
+    }
+    // remove the last redundant ", "
+    sqlBuilder.delete(sqlBuilder.length() - 2, sqlBuilder.length());
+    return sqlBuilder;
+  }
+
+  public void registerUDF(String udfName, String udfFullClassName) throws TsdbException {
+    if (IS_UDF_REGISTERED.getOrDefault(udfName, false)) {
+      return;
+    }
+    try {
+      Session udfSession = new Session(config.HOST, config.PORT, Constants.USER, Constants.PASSWD);
+      udfSession.open(config.ENABLE_THRIFT_COMPRESSION);
+      String registrationSql = String.format("CREATE FUNCTION %s AS \"%s\"", udfName, udfFullClassName);
+      udfSession.executeNonQueryStatement(registrationSql);
+      udfSession.close();
+      IS_UDF_REGISTERED.put(udfName, true);
+    } catch (Exception e) {
+      // ignore if given udf is already registered
+      if (e.getMessage().contains(ALREADY_REGISTERED_KEYWORD)) {
+        IS_UDF_REGISTERED.put(udfName, true);
+      } else {
+        LOGGER.error("Register IoTDB UDF failed because ", e);
+        throw new TsdbException(e);
+      }
+    }
+  }
+
+  private StringBuilder addFromClause(StringBuilder sqlBuilder, List<DeviceSchema> devices) {
+    sqlBuilder.append(" FROM ");
+    switch (getCommonPrefixLevel(devices)) {
+      case QUERY_COMMON_DEVICE:
+        sqlBuilder.append(getDevicePath(devices.get(0)));
+        for (int i = 1; i < devices.size(); i++) {
+          sqlBuilder.append(", ").append(getDevicePath(devices.get(i)));
+        }
+        break;
+      case QUERY_COMMON_GROUP:
+        sqlBuilder.append(devices.get(0).getGroup());
+        break;
+      case QUERY_COMMON_ROOT:
+        sqlBuilder.append(Constants.ROOT_SERIES_NAME);
+        break;
+    }
+    return sqlBuilder;
+  }
+
+  private String getCommonPrefixLevel(List<DeviceSchema> devices) {
+    boolean commonDevice = true;
+    List<String> querySensors = devices.get(0).getSensors();
     for (int i = 1; i < devices.size(); i++) {
-      builder.append(", ").append(getDevicePath(devices.get(i)));
+      for (String sensor : devices.get(i).getSensors()) {
+        if (!querySensors.contains(sensor)) {
+          commonDevice = false;
+          break;
+        }
+      }
     }
-    return builder.toString();
+    if (commonDevice) {
+      return QUERY_COMMON_DEVICE;
+    }
+
+    boolean commonGroup = true;
+    String queryGroup = devices.get(0).getGroup();
+    for (int i = 1; i < devices.size(); i++) {
+      if (!devices.get(i).getGroup().equals(queryGroup)) {
+        commonGroup = false;
+        break;
+      }
+    }
+    if (commonGroup) {
+      return QUERY_COMMON_GROUP;
+    } else {
+      return QUERY_COMMON_ROOT;
+    }
+  }
+
+  private StringBuilder addWhereTimeClause(StringBuilder sqlBuilder, long start, long end) {
+    sqlBuilder.append(" WHERE time >= ").append(start).append(" AND time <= ").append(end);
+    return sqlBuilder;
   }
 
   private Status executeQueryAndGetStatus(String sql) {
@@ -310,84 +513,4 @@ public class IoTDB implements IDatabase {
       return new Status(false, queryResultPointNum.get(), new Exception(t), sql);
     }
   }
-
-  private String getRangeQuerySql(List<DeviceSchema> deviceSchemas, long start, long end) {
-    return addWhereTimeClause(getSimpleQuerySqlHead(deviceSchemas), start, end);
-  }
-
-  private String addWhereTimeClause(String prefix, long start, long end) {
-    String startTime = start + "";
-    String endTime = end + "";
-    return prefix + " WHERE time >= " + startTime + " AND time <= " + endTime;
-  }
-
-  private String getInsertOneBatchSql(DeviceSchema deviceSchema, long timestamp,
-      List<Object> values) {
-    StringBuilder builder = new StringBuilder();
-    builder.append("insert into ")
-        .append(Constants.ROOT_SERIES_NAME)
-        .append(".").append(deviceSchema.getGroup())
-        .append(".").append(deviceSchema.getDevice())
-        .append("(timestamp");
-    for (String sensor : deviceSchema.getSensors()) {
-      builder.append(",").append(sensor);
-    }
-    builder.append(") values(");
-    builder.append(timestamp);
-    int sensorIndex = 0;
-    for (Object value : values) {
-      switch (SyntheticWorkload.getNextDataType(sensorIndex)) {
-        case "BOOLEAN":
-        case "INT32":
-        case "INT64":
-        case "FLOAT":
-        case "DOUBLE":
-          builder.append(",").append(value);
-          break;
-        case "TEXT":
-          builder.append(",").append("'").append(value).append("'");
-          break;
-      }
-      sensorIndex++;
-    }
-    builder.append(")");
-    LOGGER.debug("getInsertOneBatchSql: {}", builder);
-    return builder.toString();
-  }
-
-  private String getRangedUDFQuerySqlHead(List<DeviceSchema> devices, String udfName) {
-    StringBuilder builder = new StringBuilder();
-    builder.append("SELECT ");
-    List<String> querySensors = devices.get(0).getSensors();
-    builder.append(udfName).append("(").append(querySensors.get(0)).append(")");
-    for (int i = 1; i < querySensors.size(); i++) {
-      builder.append(", ").append(udfName).append("(").append(querySensors.get(i)).append(")");
-    }
-    return addFromClause(devices, builder);
-  }
-
-  public void registerUDF() throws TsdbException {
-    try {
-      Session udfSession = new Session(config.HOST, config.PORT, Constants.USER, Constants.PASSWD);
-      udfSession.open(config.ENABLE_THRIFT_COMPRESSION);
-      for (int i = 0; i < config.QUERY_UDF_NAME_LIST.size(); i++) {
-        String udfName = config.QUERY_UDF_NAME_LIST.get(i);
-        String udfFullClassName = config.QUERY_UDF_FULL_CLASS_NAME.get(i);
-        String registrationSql = String.format("CREATE FUNCTION %s AS \"%s\"", udfName, udfFullClassName);
-        udfSession.executeNonQueryStatement(registrationSql);
-      }
-      udfSession.close();
-      IS_UDF_REGISTRATED = true;
-    } catch (Exception e) {
-      // ignore if given udf is already registrated
-      if (e.getMessage().contains(ALREADY_REGISTERED_KEYWORD)) {
-        IS_UDF_REGISTRATED = true;
-      } else {
-        LOGGER.error("Register IoTDB UDF failed because ", e);
-        throw new TsdbException(e);
-      }
-    }
-
-  }
-
 }

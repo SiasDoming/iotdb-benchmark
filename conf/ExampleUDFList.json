@@ -4,17 +4,19 @@
     "UDFName": "ExampleUDTF",
     // UDF完整类路径，大小写敏感
     "FullClassName": "org.apache.iotdb.udf.ExampleUDTF",
-    // 函数参数说明，按顺序填写接收的各个参数信息
-    "Arguments": [
-      {
-        // 参数类型：BOOLEAN, NUMERIC, TEXT, TIMESERIES
-        "Type": "TIMESERIES",
-        // 参数默认值，参数类型为TIMESERIES时，Default为输入序列的数据类型
-        // IoTDB数据类型: BOOLEAN, INT32, INT64, FLOAT, DOUBLE, TEXT
-        // 兼容多种数据类型输入时使用|分开
-        "Default": "INT32|INT64|FLOAT|DOUBLE"
-      }
+    // 函数输入时间序列，按顺序指明所需数据类型
+    // IoTDB数据类型: BOOLEAN, INT32, INT64, FLOAT, DOUBLE, TEXT
+    // 兼容多种数据类型输入时使用|分开
+    "TimeSeries": [
+      "INT32|INT64|FLOAT|DOUBLE",
+      "FLOAT|DOUBLE"
     ],
+    // 函数参数说明，按照 key-value 形式填写所需参数的取值
+    // 是否区分大小写取决于UDF具体实现，通常需要严格区分
+    "Arguments": {
+      "ExampleKey1": "ExampleValue1",
+      "ExampleKey2": "ExampleValue2"
+    },
     // 关于该UDF函数的一些说明，仅用于在此文件作标识，可留空
     "Comments": ""
   }

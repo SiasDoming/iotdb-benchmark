@@ -3,6 +3,7 @@ package cn.edu.tsinghua.iotdb.benchmark.measurement.enums;
 import cn.edu.tsinghua.iotdb.benchmark.client.Operation;
 import cn.edu.tsinghua.iotdb.benchmark.conf.Config;
 import cn.edu.tsinghua.iotdb.benchmark.conf.ConfigDescriptor;
+import cn.edu.tsinghua.iotdb.benchmark.conf.UDFInformation;
 
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -49,8 +50,9 @@ public enum Metric {
           typeValueMap.get(operation).put(config.QUERY_AGGREGATE_FUN, 0D);
           break;
         case UDF_RANGE_QUERY:
-          for (String funcName : config.QUERY_UDF_NAME_LIST) {
-            typeValueMap.get(operation).put(funcName, 0D);
+          for (UDFInformation udfInformation : config.QUERY_UDF_INFO_LIST) {
+            String udfName = udfInformation.getUdfName();
+            typeValueMap.get(operation).put(udfName, 0D);
           }
           break;
       }

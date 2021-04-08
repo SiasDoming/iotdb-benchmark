@@ -151,11 +151,8 @@ public class Config {
 	public int STEP_SIZE = 1;
 	// 聚合查询使用的聚合函数名
 	public String QUERY_AGGREGATE_FUN = "";
-	// ************************************************* //
-	// 更新UDF参数，支持列表，写初始化函数从文件解析
-	// 查询测试的UDF函数列表
-	public List<String> QUERY_UDF_NAME_LIST = new ArrayList<>();
-	public List<String> QUERY_UDF_FULL_CLASS_NAME = new ArrayList<>();
+	// 查询测试的UDF函数信息列表
+	public List<UDFInformation> QUERY_UDF_INFO_LIST = new ArrayList<>();
 	// UDF测试循环计数
 	public int QUERY_UDF_LOOP = 0;
 	// 整个写操作的超时时间
@@ -295,9 +292,9 @@ public class Config {
 
 	public int getAndIncrementQueryUDFLoop() {
 		QUERY_UDF_LOOP ++;
-		if (QUERY_UDF_LOOP == QUERY_UDF_NAME_LIST.size()) {
+		if (QUERY_UDF_LOOP == QUERY_UDF_INFO_LIST.size()) {
 			QUERY_UDF_LOOP = 0;
-			return QUERY_UDF_NAME_LIST.size()-1;
+			return QUERY_UDF_INFO_LIST.size()-1;
 		} else {
 			return QUERY_UDF_LOOP-1;
 		}

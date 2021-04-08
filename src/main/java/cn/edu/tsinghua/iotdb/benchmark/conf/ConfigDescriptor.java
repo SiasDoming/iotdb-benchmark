@@ -2,6 +2,7 @@ package cn.edu.tsinghua.iotdb.benchmark.conf;
 
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.JSONReader;
 
@@ -10,11 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 public class ConfigDescriptor {
 
@@ -240,8 +237,18 @@ public class ConfigDescriptor {
         jsonReader.startArray();
         while (jsonReader.hasNext()) {
           JSONObject udfObject = (JSONObject) jsonReader.readObject();
-          config.QUERY_UDF_NAME_LIST.add(udfObject.get("UDFName").toString());
-          config.QUERY_UDF_FULL_CLASS_NAME.add(udfObject.get("FullClassName").toString());
+          UDFInformation udfInformation = new UDFInformation(udfObject.getString("UDFName"), udfObject.getString("FullClassName"));
+          JSONArray udfTimeSeries = udfObject.getJSONArray("TimeSeries");
+          for (int i = 0; i < udfTimeSeries.size(); i++) {
+            udfInformation.addTimeSeries(udfTimeSeries.getString(i));
+          }
+          JSONObject udfArguments = udfObject.getJSONObject("Arguments");
+          if (udfArguments != null) {
+            for (Map.Entry<String, Object> argument : udfArguments.entrySet()) {
+              udfInformation.addArgument(argument.getKey(), (String) argument.getValue());
+            }
+          }
+          config.QUERY_UDF_INFO_LIST.add(udfInformation);
         }
         jsonReader.endArray();
       } catch (Exception e) {

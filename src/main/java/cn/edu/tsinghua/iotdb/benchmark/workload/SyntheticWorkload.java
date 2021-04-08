@@ -1,9 +1,7 @@
 package cn.edu.tsinghua.iotdb.benchmark.workload;
 
 import cn.edu.tsinghua.iotdb.benchmark.client.Operation;
-import cn.edu.tsinghua.iotdb.benchmark.conf.Config;
-import cn.edu.tsinghua.iotdb.benchmark.conf.ConfigDescriptor;
-import cn.edu.tsinghua.iotdb.benchmark.conf.Constants;
+import cn.edu.tsinghua.iotdb.benchmark.conf.*;
 import cn.edu.tsinghua.iotdb.benchmark.distribution.PoissonDistribution;
 import cn.edu.tsinghua.iotdb.benchmark.distribution.ProbTool;
 import cn.edu.tsinghua.iotdb.benchmark.function.Function;
@@ -20,13 +18,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Map;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Random;
+import java.util.*;
 
 public class SyntheticWorkload implements IWorkload {
 
@@ -283,14 +275,98 @@ public class SyntheticWorkload implements IWorkload {
         config.QUERY_AGGREGATE_FUN);
   }
 
+  private List<DeviceSchema> getUDFQueryDeviceSchemaList(UDFInformation udfInformation) throws WorkloadException {
+    checkUDFQuerySchemaParams(udfInformation);
+    List<DeviceSchema> queryDevices = new ArrayList<>();
+    // shuffle device to randomly get config.QUERY_DEVICE_NUM devices
+    List<Integer> clientDevicesIndex = new ArrayList<>();
+    for (int m = 0; m < config.DEVICE_NUMBER * config.REAL_INSERT_RATE; m++) {
+      clientDevicesIndex.add(m);
+    }
+    Collections.shuffle(clientDevicesIndex, queryDeviceRandom);
+    for (int m = 0; m < config.QUERY_DEVICE_NUM; m++) {
+      DeviceSchema deviceSchema = new DeviceSchema(clientDevicesIndex.get(m));
+      List<String> sensors = deviceSchema.getSensors();
+      // build inverse index of data type to sensors
+      Map<TSDataType, List<String>> dataTypeSensorMap = new EnumMap<>(TSDataType.class);
+      for (TSDataType dataType: TSDataType.values()) {
+        dataTypeSensorMap.put(dataType, new ArrayList<>());
+      }
+      for (int i = 0; i < sensors.size(); i++) {
+        switch (getNextDataType(i)) {
+          case "BOOLEAN":
+            dataTypeSensorMap.get(TSDataType.BOOLEAN).add(sensors.get(i));
+            break;
+          case "INT32":
+            dataTypeSensorMap.get(TSDataType.INT32).add(sensors.get(i));
+            break;
+          case "INT64":
+            dataTypeSensorMap.get(TSDataType.INT64).add(sensors.get(i));
+            break;
+          case "FLOAT":
+            dataTypeSensorMap.get(TSDataType.FLOAT).add(sensors.get(i));
+            break;
+          case "DOUBLE":
+            dataTypeSensorMap.get(TSDataType.DOUBLE).add(sensors.get(i));
+            break;
+        }
+      }
+      // build input time series pairs
+      List<String> querySensors = new ArrayList<>();
+      for (int i = 0; i < config.QUERY_SENSOR_NUM; i++) {
+        // randomly choose acceptable data type and sensor
+        for (List<TSDataType> dataTypeList : udfInformation.getTimeSeries()) {
+          int dataTypeIndex = queryDeviceRandom.nextInt(dataTypeList.size());
+          while (dataTypeSensorMap.get(dataTypeList.get(dataTypeIndex)).size() == 0) {
+            dataTypeIndex ++;
+            if (dataTypeIndex == dataTypeList.size()) {
+              dataTypeIndex = 0;
+            }
+          }
+          List<String> sensorList = dataTypeSensorMap.get(dataTypeList.get(dataTypeIndex));
+          querySensors.add(sensorList.get(queryDeviceRandom.nextInt(sensorList.size())));
+        }
+        deviceSchema.setSensors(querySensors);
+      }
+      queryDevices.add(deviceSchema);
+    }
+    return queryDevices;
+  }
+
+  private void checkUDFQuerySchemaParams(UDFInformation udfInformation) throws WorkloadException {
+    checkQuerySchemaParams();
+    // check if time series of required data type are generated
+    Map<TSDataType, Boolean> dataTypeSensors = new EnumMap<>(TSDataType.class);
+    double lastTypeNumber = 0.0, thisTypeNumber;
+    for (int i = 1; i < config.proportion.size(); i++) {
+      thisTypeNumber = config.SENSOR_NUMBER * config.proportion.get(i);
+      dataTypeSensors.put(TSDataType.deserialize((byte) (i - 1)), (thisTypeNumber-lastTypeNumber >= 1.0));
+      lastTypeNumber = thisTypeNumber;
+    }
+    for (List<TSDataType> timeSeries : udfInformation.getTimeSeries()) {
+      boolean isAvailable = false;
+      for (TSDataType dataType : timeSeries) {
+        if (dataTypeSensors.get(dataType)) {
+          isAvailable = true;
+          break;
+        }
+      }
+      if (!isAvailable) {
+        LOGGER.error("No synthetic time series available for UDF {}, please check INSERT_DATATYPE_PROPORTION.", udfInformation.getUdfName());
+        throw new WorkloadException("No synthetic time series available for UDF " + udfInformation.getUdfName()
+                + ". Please check input data type and INSERT_DATATYPE_PROPORTION.");
+      }
+    }
+  }
+
   @Override
   public UDFRangeQuery getUDFRangeQuery() throws WorkloadException{
-    // to dos: 更新RangedUDFQuery构造输入参数，支持复杂参数读取和输入
-    List<DeviceSchema> queryDevices = getQueryDeviceSchemaList();
+    UDFInformation udfInformation = config.QUERY_UDF_INFO_LIST.get(config.getAndIncrementQueryUDFLoop());
+    List<DeviceSchema> queryDevices = getUDFQueryDeviceSchemaList(udfInformation);
     long startTimestamp = getQueryStartTimestamp(Operation.UDF_RANGE_QUERY);
     long endTimestamp = startTimestamp + config.QUERY_INTERVAL;
-    int currentUDFLoop = config.getAndIncrementQueryUDFLoop();
-    return new UDFRangeQuery(queryDevices, startTimestamp, endTimestamp, config.QUERY_UDF_NAME_LIST.get(currentUDFLoop), config.QUERY_UDF_FULL_CLASS_NAME.get(currentUDFLoop));
+    return new UDFRangeQuery(queryDevices, startTimestamp, endTimestamp, udfInformation.getUdfName(), udfInformation.getFullClassName(),
+            udfInformation.getTimeSeries().size(), udfInformation.getArguments());
   }
 
   private static long getTimestampConst(String timePrecision) {

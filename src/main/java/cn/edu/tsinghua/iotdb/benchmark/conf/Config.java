@@ -3,7 +3,6 @@ package cn.edu.tsinghua.iotdb.benchmark.conf;
 import cn.edu.tsinghua.iotdb.benchmark.function.Function;
 import cn.edu.tsinghua.iotdb.benchmark.function.FunctionParam;
 import cn.edu.tsinghua.iotdb.benchmark.function.FunctionXml;
-import cn.edu.tsinghua.iotdb.benchmark.workload.reader.DataSet;
 
 import java.io.InputStream;
 
@@ -159,9 +158,6 @@ public class Config {
 	public List<String> QUERY_UDF_FULL_CLASS_NAME = new ArrayList<>();
 	// UDF测试循环计数
 	public int QUERY_UDF_LOOP = 0;
-	// 真实数据集查询的时间筛选范围
-	public long REAL_QUERY_START_TIME = 0;
-	public long REAL_QUERY_STOP_TIME = Long.MAX_VALUE;
 	// 整个写操作的超时时间
 	public int WRITE_OPERATION_TIMEOUT_MS = 120000;
 	// 整个读操作的超时时间
@@ -174,14 +170,6 @@ public class Config {
 	public String METADATA_FILE_PATH = "";
 	// 批写入数据行数
 	public int BATCH_EXECUTE_COUNT = 5000;
-
-	/** 真实数据集导入参数 */
-	// 数据集文件路径
-	public String FILE_PATH;
-	// 数据集名称
-	public DataSet DATA_SET;
-	// 真实数据集的字段列表
-	public List<String> FIELDS;
 
 	/** Server Mode 参数 */
 	// 监测状态文件目录
@@ -302,25 +290,6 @@ public class Config {
 		for (int i = 0; i < SENSOR_NUMBER; i++) {
 			String sensorCode = "s_" + i;
 			SENSOR_CODES.add(sensorCode);
-		}
-	}
-
-	/**
-	 * 根据选择的真实数据集初始化字段列表
-	 */
-	void initRealDataSetSchema() {
-		switch (DATA_SET) {
-			case TDRIVE:
-				FIELDS = Arrays.asList("longitude", "latitude");
-				break;
-			case REDD:
-				FIELDS = Arrays.asList("v");
-				break;
-			case GEOLIFE:
-				FIELDS = Arrays.asList("Latitude", "Longitude", "Zero", "Altitude");
-				break;
-			default:
-				throw new RuntimeException(DATA_SET + " is not support");
 		}
 	}
 

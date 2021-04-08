@@ -1,7 +1,5 @@
 package cn.edu.tsinghua.iotdb.benchmark.conf;
 
-import cn.edu.tsinghua.iotdb.benchmark.workload.reader.DataSet;
-
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
 import com.alibaba.fastjson.JSONObject;
@@ -36,7 +34,6 @@ public class ConfigDescriptor {
     config.initInnerFunction();
     config.initSensorCodes();
     config.initSensorFunction();
-    config.initRealDataSetSchema();
   }
 
   public static final ConfigDescriptor getInstance() {
@@ -175,10 +172,6 @@ public class ConfigDescriptor {
                 .parseInt(properties.getProperty("STEP_SIZE", config.STEP_SIZE + ""));
         config.QUERY_AGGREGATE_FUN = properties
                 .getProperty("QUERY_AGGREGATE_FUN", config.QUERY_AGGREGATE_FUN);
-        config.REAL_QUERY_START_TIME = Long
-                .parseLong(properties.getProperty("REAL_QUERY_START_TIME", config.REAL_QUERY_START_TIME + ""));
-        config.REAL_QUERY_STOP_TIME = Long
-                .parseLong(properties.getProperty("REAL_QUERY_STOP_TIME", config.REAL_QUERY_STOP_TIME + ""));
         config.WRITE_OPERATION_TIMEOUT_MS = Integer
                 .parseInt(properties.getProperty("WRITE_OPERATION_TIMEOUT_MS", config.WRITE_OPERATION_TIMEOUT_MS + ""));
         config.READ_OPERATION_TIMEOUT_MS = Integer
@@ -188,22 +181,6 @@ public class ConfigDescriptor {
         config.METADATA_FILE_PATH = properties.getProperty("METADATA_FILE_PATH", "");
         config.BATCH_EXECUTE_COUNT = Integer
                 .parseInt(properties.getProperty("BATCH_EXECUTE_COUNT", config.BATCH_EXECUTE_COUNT + ""));
-        /** 真实数据集导入参数 */
-        config.FILE_PATH = properties.getProperty("FILE_PATH", "no file");
-        String dataset = properties.getProperty("DATA_SET", "NULL");
-        switch (dataset) {
-          case "GEOLIFE":
-            config.DATA_SET = DataSet.GEOLIFE;
-            break;
-          case "REDD":
-            config.DATA_SET = DataSet.REDD;
-            break;
-          case "TDRIVE":
-            config.DATA_SET = DataSet.TDRIVE;
-            break;
-          default:
-            throw new RuntimeException("not support dataset: " + dataset);
-        }
         /** Server Mode 参数 */
         config.MONITOR_FLAG_PATH = properties.getProperty("MONITOR_FLAG_PATH", "/logs");
         String dataDir = properties.getProperty("IOTDB_DATA_DIR", "/home/liurui/data/data");

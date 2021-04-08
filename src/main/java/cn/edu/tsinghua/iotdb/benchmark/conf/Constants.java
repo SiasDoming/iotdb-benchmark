@@ -20,8 +20,6 @@ public class Constants {
 
     //different running mode
     public static final String MODE_IMPORT_DATA_FROM_CSV = "importDataFromCSV";
-    public static final String MODE_WRITE_WITH_REAL_DATASET = "writeWithRealDataSet";
-    public static final String MODE_QUERY_WITH_REAL_DATASET = "queryWithRealDataSet";
     public static final String MODE_TEST_WITH_DEFAULT_PATH = "testWithDefaultPath";
     public static final String MODE_SERVER_MODE = "serverMODE";
     public static final String MODE_CLIENT_SYSTEM_INFO = "clientSystemInfo";

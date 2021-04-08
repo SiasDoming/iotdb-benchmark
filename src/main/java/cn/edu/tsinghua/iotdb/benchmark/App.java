@@ -2,8 +2,6 @@ package cn.edu.tsinghua.iotdb.benchmark;
 
 import cn.edu.tsinghua.iotdb.benchmark.client.Client;
 import cn.edu.tsinghua.iotdb.benchmark.client.Operation;
-import cn.edu.tsinghua.iotdb.benchmark.client.QueryRealDatasetClient;
-import cn.edu.tsinghua.iotdb.benchmark.client.RealDatasetClient;
 import cn.edu.tsinghua.iotdb.benchmark.client.SyntheticClient;
 import cn.edu.tsinghua.iotdb.benchmark.conf.Config;
 import cn.edu.tsinghua.iotdb.benchmark.conf.ConfigDescriptor;
@@ -21,7 +19,6 @@ import cn.edu.tsinghua.iotdb.benchmark.tool.ImportDataFromCSV;
 import cn.edu.tsinghua.iotdb.benchmark.tool.MetaDateBuilder;
 import cn.edu.tsinghua.iotdb.benchmark.tsdb.DBWrapper;
 import cn.edu.tsinghua.iotdb.benchmark.tsdb.TsdbException;
-import cn.edu.tsinghua.iotdb.benchmark.workload.reader.BasicReader;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DataSchema;
 import cn.edu.tsinghua.iotdb.benchmark.workload.schema.DeviceSchema;
 
@@ -30,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 import java.util.EnumMap;
@@ -65,12 +61,6 @@ public class App {
         switch (config.BENCHMARK_WORK_MODE.trim()) {
             case Constants.MODE_TEST_WITH_DEFAULT_PATH:
                 testWithDefaultPath(config);
-                break;
-            case Constants.MODE_WRITE_WITH_REAL_DATASET:
-                testWithRealDataSet(config);
-                break;
-            case Constants.MODE_QUERY_WITH_REAL_DATASET:
-                queryWithRealDataSet(config);
                 break;
             case Constants.MODE_SERVER_MODE:
             case Constants.MODE_CLIENT_SYSTEM_INFO:
@@ -150,86 +140,6 @@ public class App {
         }
     }
 
-    /**
-     * 测试真实数据集
-     */
-    private static void testWithRealDataSet(Config config) {
-        // BATCH_SIZE is points number in this mode
-        config.BATCH_SIZE = config.BATCH_SIZE / config.FIELDS.size();
-
-        File dirFile = new File(config.FILE_PATH);
-        if (!dirFile.exists()) {
-            LOGGER.error("{} does not exit", config.FILE_PATH);
-            return;
-        }
-
-        LOGGER.info("use dataset: {}", config.DATA_SET);
-
-        List<String> files = new ArrayList<>();
-        getAllFiles(config.FILE_PATH, files);
-        LOGGER.info("total files: {}", files.size());
-
-        Collections.sort(files);
-
-        List<DeviceSchema> deviceSchemaList = BasicReader.getDeviceSchemaList(files, config);
-
-        Measurement measurement = new Measurement();
-        DBWrapper dbWrapper = new DBWrapper(measurement);
-        // register schema if needed
-        try {
-            LOGGER.info("start to init IoTDB");
-            dbWrapper.init();
-            if (config.IS_DELETE_DATA) {
-                try {
-                    LOGGER.info("start to clean old data");
-                    dbWrapper.cleanup();
-                } catch (TsdbException e) {
-                    LOGGER.error("Cleanup failed because ", e);
-                }
-            }
-            try {
-                // register device schema
-                LOGGER.info("start to register schema");
-                dbWrapper.registerSchema(deviceSchemaList);
-            } catch (TsdbException e) {
-                LOGGER.error("Register schema failed because ", e);
-            }
-        } catch (TsdbException e) {
-            LOGGER.error("Initialize failed because ", e);
-        } finally {
-            try {
-                dbWrapper.close();
-            } catch (TsdbException e) {
-                LOGGER.error("Close failed because ", e);
-            }
-        }
-        CyclicBarrier barrier = new CyclicBarrier(config.CLIENT_NUMBER);
-
-        List<List<String>> threadFiles = new ArrayList<>();
-        for (int i = 0; i < config.CLIENT_NUMBER; i++) {
-            threadFiles.add(new ArrayList<>());
-        }
-
-        for (int i = 0; i < files.size(); i++) {
-            String filePath = files.get(i);
-            int thread = i % config.CLIENT_NUMBER;
-            threadFiles.get(thread).add(filePath);
-        }
-
-        // create CLIENT_NUMBER client threads to do the workloads
-        List<Measurement> threadsMeasurements = new ArrayList<>();
-        List<Client> clients = new ArrayList<>();
-        CountDownLatch downLatch = new CountDownLatch(config.CLIENT_NUMBER);
-        long st = System.nanoTime();
-        ExecutorService executorService = Executors.newFixedThreadPool(config.CLIENT_NUMBER);
-        for (int i = 0; i < config.CLIENT_NUMBER; i++) {
-            Client client = new RealDatasetClient(i, downLatch, config, threadFiles.get(i), barrier);
-            clients.add(client);
-            executorService.submit(client);
-        }
-        finalMeasure(executorService, downLatch, measurement, threadsMeasurements, st, clients);
-    }
-
     private static void finalMeasure(ExecutorService executorService, CountDownLatch downLatch,
         Measurement measurement, List<Measurement> threadsMeasurements,
         long st, List<Client> clients) {
@@ -260,68 +170,6 @@ public class App {
         measurement.showMetrics();
         if (config.CSV_OUTPUT) {
             measurement.outputCSV();
-        }
-    }
-
-    /**
-     * 测试真实数据集
-     *
-     * @param config configurations
-     */
-    private static void queryWithRealDataSet(Config config) {
-        LOGGER.info("use dataset: {}", config.DATA_SET);
-        //check whether the parameters are legitimate
-        if (!checkParamForQueryRealDataSet(config)) {
-            return;
-        }
-
-        Measurement measurement = new Measurement();
-        CyclicBarrier barrier = new CyclicBarrier(config.CLIENT_NUMBER);
-
-        // create CLIENT_NUMBER client threads to do the workloads
-        List<Measurement> threadsMeasurements = new ArrayList<>();
-        List<Client> clients = new ArrayList<>();
-        CountDownLatch downLatch = new CountDownLatch(config.CLIENT_NUMBER);
-        long st = System.nanoTime();
-        ExecutorService executorService = Executors.newFixedThreadPool(config.CLIENT_NUMBER);
-        for (int i = 0; i < config.CLIENT_NUMBER; i++) {
-            Client client = new QueryRealDatasetClient(i, downLatch, barrier, config);
-            clients.add(client);
-            executorService.submit(client);
-        }
-        finalMeasure(executorService, downLatch, measurement, threadsMeasurements, st, clients);
-    }
-
-    private static boolean checkParamForQueryRealDataSet(Config config) {
-        if (config.QUERY_SENSOR_NUM > config.FIELDS.size()) {
-            LOGGER.error("QUERY_SENSOR_NUM={} can't greater than size of field, {}.",
-                config.QUERY_SENSOR_NUM, config.FIELDS);
-            return false;
-        }
-        String[] split = config.OPERATION_PROPORTION.split(":");
-        if (split.length != Operation.values().length) {
-            LOGGER.error("OPERATION_PROPORTION error, please check this parameter.");
-            return false;
-        }
-        if (!split[0].trim().equals("0")) {
-            LOGGER.error("OPERATION_PROPORTION {} error, {} can't have write operation.",
-                config.OPERATION_PROPORTION, config.BENCHMARK_WORK_MODE);
-            return false;
-        }
-        return true;
-    }
-
-    private static void getAllFiles(String strPath, List<String> files) {
-        File f = new File(strPath);
-        if (f.isDirectory()) {
-            File[] fs = f.listFiles();
-            assert fs != null;
-            for (File f1 : fs) {
-                String fsPath = f1.getAbsolutePath();
-                getAllFiles(fsPath, files);
-            }
-        } else if (f.isFile()) {
-            files.add(f.getAbsolutePath());
         }
     }
 

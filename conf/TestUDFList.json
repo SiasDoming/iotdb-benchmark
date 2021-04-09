@@ -14,8 +14,8 @@
       "INT32|INT64|FLOAT|DOUBLE"
     ],
     "Arguments": {
-      "start": "",
-      "end": "",
+      "start": "-10000",
+      "end": "10000",
       "count": "100"
     }
   },
@@ -111,7 +111,7 @@
       "INT32|INT64|FLOAT|DOUBLE"
     ],
     "Arguments": {
-      "window": ""
+      "window": "100000000"
     }
   },
   {
@@ -121,7 +121,7 @@
       "INT32|INT64|FLOAT|DOUBLE"
     ],
     "Arguments": {
-      "window": ""
+      "window": "100000000"
     }
   },
   {
@@ -131,7 +131,7 @@
       "INT32|INT64|FLOAT|DOUBLE"
     ],
     "Arguments": {
-      "window": ""
+      "window": "100000000"
     }
   },
   {
@@ -141,7 +141,7 @@
       "INT32|INT64|FLOAT|DOUBLE"
     ],
     "Arguments": {
-      "window": ""
+      "window": "100000000"
     }
   }
 ]

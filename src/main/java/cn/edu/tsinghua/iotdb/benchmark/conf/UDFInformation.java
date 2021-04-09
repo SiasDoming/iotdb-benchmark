@@ -45,6 +45,9 @@ public class UDFInformation {
                 case "DOUBLE":
                     singleTimeSeries.add(TSDataType.DOUBLE);
                     break;
+                case "TEXT":
+                    singleTimeSeries.add(TSDataType.TEXT);
+                    break;
                 default:
                     LOGGER.error("UDF {} time series data type error, get {}", this.udfName, dataType);
                     break;
